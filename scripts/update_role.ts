@@ -1,4 +1,4 @@
-import { db } from '../server/_core/db.js';
+import { db } from '../backend/db';
 import { users } from '../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
 

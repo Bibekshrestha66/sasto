@@ -1,5 +1,5 @@
-import { db } from "./server/db";
-import { users } from "./server/db/schema";
+import { db } from "../../backend/db";
+import { users } from "../../backend/db/schema";
 import scrypt from "scrypt-async";
 
 async function seed() {

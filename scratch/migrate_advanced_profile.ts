@@ -1,9 +1,16 @@
-import Database from 'better-sqlite3';
+declare module 'better-sqlite3';
+import Database = require('better-sqlite3');
 const db = new Database('sqlite.db');
 
 console.log("Migrating database for Advanced Profile fields...");
 
 try {
+  // Ensure the users table exists before attempting an ALTER TABLE
+  const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'").get();
+  if (!tableExists) {
+    throw new Error("Table 'users' does not exist in the database.");
+  }
+
   // Check existing columns to avoid duplicate column errors
   const tableInfo = db.prepare("PRAGMA table_info(users)").all() as any[];
   const existingColumns = tableInfo.map(col => col.name);
