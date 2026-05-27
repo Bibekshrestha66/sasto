@@ -233,7 +233,7 @@ describe("PostAdModal Component", () => {
   });
 
   describe("Category Selection", () => {
-    it("should have all 12 categories available", () => {
+    it("should have all marketplace categories available", () => {
       const categories = [
         "Mobile Phones",
         "Electronics & Appliances",
@@ -243,13 +243,18 @@ describe("PostAdModal Component", () => {
         "Services",
         "Fashion & Beauty",
         "Pets & Animals",
-        "Books & Sports",
+        "Books & Education",
         "Furniture & Household",
         "Kids & Babies",
-        "Commercial & Industrial",
+        "Commercial",
+        "Agriculture",
+        "Digital",
+        "Groceries",
+        "Medical",
+        "Rooms",
       ];
 
-      expect(categories.length).toBe(12);
+      expect(categories.length).toBe(17);
     });
 
     it("should select a category", () => {

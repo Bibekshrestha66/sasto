@@ -58,6 +58,7 @@ export default function EditListing() {
 
   const currentSector = formData.type === "rental" ? "rental" : formData.type === "auction" ? "auction" : "marketplace";
   const { data: categories } = trpc.categories.list.useQuery({ sector: currentSector });
+  const visibleCategories = categories?.filter((cat: any) => cat.slug !== "want-to-buy" && cat.slug !== "kids-clothing");
   const { data: subCategories } = trpc.categories.getSubcategories.useQuery(
     { parentId: parseInt(formData.category, 10), sector: currentSector },
     { enabled: !!formData.category && !isNaN(parseInt(formData.category)) }
@@ -170,6 +171,17 @@ export default function EditListing() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+
+    if (name === "type") {
+      setFormData(prev => ({ ...prev, type: value as any, category: "", subCategory: "" }));
+      return;
+    }
+
+    if (name === "category") {
+      setFormData(prev => ({ ...prev, category: value, subCategory: "" }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -348,7 +360,7 @@ export default function EditListing() {
                   className="w-full h-11 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 appearance-none focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-slate-700 text-sm"
                 >
                   <option value="">Select Category</option>
-                  {categories?.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                  {visibleCategories?.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                   <ChevronDown className="w-3.5 h-3.5" />

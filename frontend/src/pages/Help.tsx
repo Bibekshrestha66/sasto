@@ -12,6 +12,14 @@ import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 
+// Format raw DB count into short readable form
+function formatCount(n?: number): string {
+  if (n === undefined || n === null) return "—";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M+`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}K+`;
+  return String(n);
+}
+
 // ─────────────────────────────────────────────────────────────
 // FAQ DATA
 // ─────────────────────────────────────────────────────────────
@@ -69,11 +77,20 @@ export default function Help() {
       refetchOnWindowFocus: false,
     });
 
+  const { data: stats, isLoading: statsLoading } =
+    trpc.system.getPlatformStats.useQuery(undefined, {
+      staleTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: false,
+    });
+
   const supportPhone =
     config?.phone || "+977-1-4123456";
 
   const supportEmail =
     config?.email || "support@sasto.com";
+
+  const liveUsers = statsLoading ? "…" : formatCount(stats?.totalUsers);
+  const liveFAQs  = FAQ_ITEMS.length.toString();
 
   // ───────────────────────────────────────────────────────────
   // Optimized Search
@@ -118,13 +135,13 @@ export default function Help() {
             Find answers, get support, and learn how to safely buy and sell on Sasto.
           </p>
 
-          {/* STATS */}
+          {/* STATS – live data */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-2xl mx-auto">
             {[
-              ["24/7", "Support"],
-              ["100%", "Secure"],
-              ["50K+", "Users"],
-              ["10K+", "FAQs"],
+              ["24/7",      "Support"],
+              ["100%",      "Secure"],
+              [liveUsers,   "Registered Users"],
+              [liveFAQs,    "FAQs Available"],
             ].map(([value, label]) => (
               <div
                 key={label}

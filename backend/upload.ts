@@ -1,12 +1,23 @@
 import { Router } from "express";
 import multer from "multer";
-import { v2 as cloudinary } from "cloudinary";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import crypto from "crypto";
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+// Cloudflare R2 Credentials
+const accountId = process.env.R2_ACCOUNT_ID;
+const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+const bucketName = process.env.R2_BUCKET_NAME || "sasto";
+const publicCustomDomain = process.env.R2_PUBLIC_CUSTOM_DOMAIN; // e.g. https://pub-xxx.r2.dev or https://images.sasto.com.np
+
+// Initialize R2 client using standard S3 compatibility
+const r2Client = new S3Client({
+  endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: accessKeyId || "",
+    secretAccessKey: secretAccessKey || "",
+  },
+  region: "auto",
 });
 
 const uploadRouter = Router();
@@ -24,16 +35,30 @@ uploadRouter.post("/image", upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "No image file provided" });
     }
 
-    // Convert buffer to base64 for Cloudinary
-    const b64 = Buffer.from(req.file.buffer).toString("base64");
-    let dataURI = "data:" + req.file.mimetype + ";base64," + b64;
+    // Generate unique safe name for the file
+    const fileExtension = req.file.originalname.split(".").pop() || "jpg";
+    const randomHash = crypto.randomBytes(16).toString("hex");
+    const key = `uploads/${Date.now()}-${randomHash}.${fileExtension}`;
 
-    const result = await cloudinary.uploader.upload(dataURI, {
-      resource_type: "auto",
-      folder: "sasto_marketplace/images",
-    });
+    // Upload object to Cloudflare R2
+    await r2Client.send(
+      new PutObjectCommand({
+        Bucket: bucketName,
+        Key: key,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      })
+    );
 
-    res.json({ url: result.secure_url });
+    // Compute public URL
+    // If publicCustomDomain is configured, use it, otherwise fall back to a public r2 endpoint
+    const baseUrl = publicCustomDomain 
+      ? publicCustomDomain.replace(/\/$/, "")
+      : `https://${bucketName}.${accountId}.r2.cloudflarestorage.com`;
+
+    const publicUrl = `${baseUrl}/${key}`;
+
+    res.json({ url: publicUrl });
   } catch (error: any) {
     console.error("Upload error:", error);
     res.status(500).json({ error: error.message || "Failed to upload image" });

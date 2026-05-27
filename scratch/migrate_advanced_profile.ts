@@ -1,5 +1,4 @@
-declare module 'better-sqlite3';
-import Database = require('better-sqlite3');
+import Database from 'better-sqlite3';
 const db = new Database('sqlite.db');
 
 console.log("Migrating database for Advanced Profile fields...");

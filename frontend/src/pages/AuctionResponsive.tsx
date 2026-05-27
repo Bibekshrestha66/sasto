@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,117 +32,7 @@ interface Auction {
   views: number;
 }
 
-// Static auction data with reliable images
-const AUCTIONS_DATA: Auction[] = [
-  {
-    id: 1,
-    title: "Vintage Royal Enfield 1965",
-    startingPrice: 350000,
-    currentPrice: 450000,
-    bids: 23,
-    timeLeftSeconds: 9900,
-    location: "Kathmandu, Bagmati",
-    seller: "ClassicBikes",
-    sellerName: "Classic Bikes Nepal",
-    verified: true,
-    rating: 4.8,
-    image: "https://picsum.photos/id/111/600/400",
-    category: "vehicles",
-    subcategory: "bike",
-    description: "Beautifully maintained 1965 Royal Enfield Bullet. Single owner, garage kept. Perfect for collectors and enthusiasts.",
-    views: 1245,
-  },
-  {
-    id: 2,
-    title: "Land in Kathmandu Valley",
-    startingPrice: 5000000,
-    currentPrice: 8500000,
-    bids: 45,
-    timeLeftSeconds: 129600,
-    location: "Kathmandu, Bagmati",
-    seller: "PropertyAuctions",
-    sellerName: "Property Auctions Nepal",
-    verified: true,
-    rating: 4.9,
-    image: "https://picsum.photos/id/104/600/400",
-    category: "property",
-    subcategory: "land",
-    description: "Prime commercial land located in the heart of Kathmandu Valley. Perfect for development.",
-    views: 2341,
-  },
-  {
-    id: 3,
-    title: "Antique Buddha Statue",
-    startingPrice: 50000,
-    currentPrice: 75000,
-    bids: 12,
-    timeLeftSeconds: 19200,
-    location: "Bhaktapur, Bagmati",
-    seller: "AntiquesNepal",
-    sellerName: "Antiques Nepal",
-    verified: false,
-    rating: 4.7,
-    image: "https://picsum.photos/id/119/600/400",
-    category: "antiques",
-    subcategory: "statue",
-    description: "Rare 18th century Buddha statue from Bhaktapur. Exceptional craftsmanship and historical value.",
-    views: 567,
-  },
-  {
-    id: 4,
-    title: "Gold Jewelry Collection",
-    startingPrice: 100000,
-    currentPrice: 250000,
-    bids: 34,
-    timeLeftSeconds: 86400,
-    location: "Lalitpur, Bagmati",
-    seller: "JewelryHub",
-    sellerName: "Jewelry Hub",
-    verified: true,
-    rating: 4.6,
-    image: "https://picsum.photos/id/20/600/400",
-    category: "antiques",
-    subcategory: "jewelry",
-    description: "Authentic 22k gold jewelry set including necklace, earrings, and bangles. Hallmarked.",
-    views: 987,
-  },
-  {
-    id: 5,
-    title: "MacBook Pro M3 Max",
-    startingPrice: 250000,
-    currentPrice: 320000,
-    bids: 56,
-    timeLeftSeconds: 43200,
-    location: "Kathmandu, Bagmati",
-    seller: "TechHub",
-    sellerName: "Tech Hub Nepal",
-    verified: true,
-    rating: 4.9,
-    image: "https://picsum.photos/id/0/600/400",
-    category: "electronics",
-    subcategory: "laptop",
-    description: "Latest MacBook Pro M3 Max, 36GB RAM, 1TB SSD. Like new condition with warranty.",
-    views: 3456,
-  },
-  {
-    id: 6,
-    title: "Modern 3BHK Apartment",
-    startingPrice: 15000000,
-    currentPrice: 18500000,
-    bids: 28,
-    timeLeftSeconds: 172800,
-    location: "Lalitpur, Bagmati",
-    seller: "UrbanLiving",
-    sellerName: "Urban Living Realty",
-    verified: true,
-    rating: 4.8,
-    image: "https://picsum.photos/id/106/600/400",
-    category: "property",
-    subcategory: "apartment",
-    description: "Luxury apartment with modern amenities, parking, and stunning city views.",
-    views: 876,
-  },
-];
+// No mock data — production mode uses live database only
 
 const CATEGORIES = [
   { id: "all", name: "All Categories", icon: Sparkles },
@@ -418,7 +309,6 @@ function AuctionCard({ auction, viewMode, isFavorite, onToggleFavorite, onNaviga
 export function AuctionResponsive() {
   const [, navigate] = useLocation();
   const [auctions, setAuctions] = useState<Auction[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedSubcategory, setSelectedSubcategory] = useState("all");
   const [activeFilterTab, setActiveFilterTab] = useState("all");
@@ -432,22 +322,49 @@ export function AuctionResponsive() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Simulate API fetch
+  // Fetch auctions from live backend TRPC endpoint
+  const { data: liveAuctionsData, isLoading } = trpc.auctions.list.useQuery({ limit: 50 }, {
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: trendingLocationsData, isLoading: trendingLoading } = trpc.search.trendingLocations.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: topSellersData, isLoading: topSellersLoading } = trpc.search.topSellers.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+
+  // Map live database auctions — no mock fallback
+  const auctionsList = useMemo(() => {
+    if (!liveAuctionsData || liveAuctionsData.length === 0) {
+      return [];
+    }
+    return liveAuctionsData.map((a: any) => ({
+      id: Number(a.id),
+      title: a.title || a.listing?.title || "",
+      startingPrice: Number(a.startingPrice || a.listing?.price || 0),
+      currentPrice: Number(a.currentPrice || a.listing?.price || 0),
+      bids: Number(a.bidsCount || a.bids?.length || 0),
+      timeLeftSeconds: a.endTime ? Math.max(0, Math.floor((new Date(a.endTime).getTime() - Date.now()) / 1000)) : 86400,
+      location: a.listing?.location || "Nepal",
+      seller: a.listing?.seller?.name || "Seller",
+      sellerName: a.listing?.seller?.name || "Seller",
+      verified: !!a.listing?.seller?.isVerified,
+      rating: Number(a.listing?.seller?.rating || 4.5),
+      image: a.listing?.images?.[0] || "",
+      category: a.listing?.category || "other",
+      subcategory: a.listing?.subcategory || "",
+      description: a.listing?.description || "",
+      views: Number(a.listing?.views || 0)
+    }));
+  }, [liveAuctionsData]);
+
   useEffect(() => {
-    const fetchAuctions = async () => {
-      try {
-        setLoading(true);
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setAuctions(AUCTIONS_DATA);
-      } catch (err) {
-        console.error("Failed to load auctions:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAuctions();
-  }, []);
+    if (auctionsList) {
+      setAuctions(auctionsList);
+    }
+  }, [auctionsList]);
 
   // Persist favorites to localStorage
   useEffect(() => {
@@ -496,7 +413,7 @@ export function AuctionResponsive() {
   const totalBids = auctions.reduce((s, a) => s + a.bids, 0);
   const activeAuctions = auctions.length;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -705,6 +622,12 @@ export function AuctionResponsive() {
                     onNavigate={handleNavigate}
                   />
                 ))
+              ) : auctionsList.length === 0 ? (
+                <div className="text-center py-12 col-span-full">
+                  <div className="text-5xl mb-4">🔨</div>
+                  <h3 className="text-lg font-bold text-gray-700 mb-2">No auctions listed yet</h3>
+                  <p className="text-gray-400 text-sm mb-6">Be the first to create an auction listing!</p>
+                </div>
               ) : (
                 <div className="text-center py-12 col-span-full">
                   <div className="text-5xl mb-4">🔨</div>
@@ -755,6 +678,62 @@ export function AuctionResponsive() {
                   ))}
               </div>
             </div>
+
+            {/* Trending Locations - Shows real locations from database */}
+            {!trendingLoading && trendingLocationsData && trendingLocationsData.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-3 text-sm flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-orange-500" />
+                  Trending Locations
+                </h3>
+                <div className="space-y-3">
+                  {trendingLocationsData.map((loc, i) => (
+                    <div
+                      key={i}
+                      className="flex justify-between items-center cursor-pointer hover:bg-gray-50 p-1 rounded"
+                      onClick={() => setSearchTerm(loc.name)}
+                    >
+                      <div>
+                        <p className="font-semibold text-xs text-gray-800">{loc.name}</p>
+                        <p className="text-[10px] text-gray-500">{loc.count} auctions</p>
+                      </div>
+                      <div className="flex items-center gap-0.5">
+                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                        <span className="text-xs font-semibold text-gray-700">{loc.rating.toFixed(1)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Top Rated Sellers */}
+            {!topSellersLoading && topSellersData && topSellersData.length > 0 && (
+              <div className="bg-white border rounded-xl p-4 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-3 text-sm flex items-center gap-2">
+                  <Users className="w-4 h-4 text-orange-500" />
+                  Top Rated Sellers
+                </h3>
+                <div className="space-y-3">
+                  {topSellersData.slice(0, 4).map((seller) => (
+                    <div
+                      key={seller.id}
+                      className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg"
+                      onClick={() => navigate(`/seller/${seller.id}`)}
+                    >
+                      <div className="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                        {seller.name?.charAt(0)?.toUpperCase() || "S"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800 truncate">{seller.name}</p>
+                        <p className="text-[10px] text-orange-600">{seller.totalListings} auctions</p>
+                      </div>
+                      {seller.verificationStatus === "verified" && <BadgeCheck className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Trust Section */}
             <div className="bg-white border border-gray-200 rounded-xl p-4">

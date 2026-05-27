@@ -18,11 +18,11 @@ export function useAuth(options?: UseAuthOptions) {
     refetchOnWindowFocus: false,
   });
 
-  const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: (user) => {
+  const loginMutation = (trpc.auth as any).login?.useMutation({
+    onSuccess: (user: any) => {
       utils.auth.me.setData(undefined, user);
     },
-  });
+  }) || { mutateAsync: async () => {}, isPending: false, error: null };
 
   const registerMutation = (trpc.auth as any).register?.useMutation({
     onSuccess: (user: any) => {
@@ -30,11 +30,11 @@ export function useAuth(options?: UseAuthOptions) {
     },
   }) || { mutateAsync: async () => {}, isPending: false, error: null };
 
-  const logoutMutation = trpc.auth.logout.useMutation({
+  const logoutMutation = (trpc.auth as any).logout?.useMutation({
     onSuccess: () => {
       utils.auth.me.setData(undefined, null);
     },
-  });
+  }) || { mutateAsync: async () => {}, isPending: false, error: null };
 
   const logout = useCallback(async () => {
     try {

@@ -414,6 +414,14 @@ export default function DealsAndOffersPage() {
     sortBy: sortBy === "ending-soon" ? "discount" : sortBy === "popular" ? "popular" : sortBy === "newest" ? "newest" : sortBy === "price-low" ? "price-low" : "price-high"
   });
 
+  const { data: trendingLocationsData, isLoading: trendingLoading } = (trpc as any).search.trendingLocations.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: topSellersData, isLoading: topSellersLoading } = (trpc as any).search.topSellers.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+
   const { data: realAds } = (trpc as any).ads.getActiveAds.useQuery({ placement: "sidebar_right" });
   const [hiddenAds, setHiddenAds] = useState<number[]>([]);
   const visibleAds = (realAds || []).filter((ad: any) => !hiddenAds.includes(ad.id));
@@ -825,6 +833,62 @@ export default function DealsAndOffersPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Trending Locations - Shows real locations from database */}
+              {!trendingLoading && trendingLocationsData && trendingLocationsData.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                  <h3 className="font-bold text-gray-900 mb-3 text-sm flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-red-500" />
+                    Trending Locations
+                  </h3>
+                  <div className="space-y-3">
+                    {trendingLocationsData.map((loc, i) => (
+                      <div
+                        key={i}
+                        className="flex justify-between items-center cursor-pointer hover:bg-gray-50 p-1 rounded"
+                        onClick={() => setSearchQuery(loc.name)}
+                      >
+                        <div>
+                          <p className="font-semibold text-xs text-gray-800">{loc.name}</p>
+                          <p className="text-[10px] text-gray-500">{loc.count} deals</p>
+                        </div>
+                        <div className="flex items-center gap-0.5">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-xs font-semibold text-gray-700">{loc.rating.toFixed(1)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Top Rated Sellers */}
+              {!topSellersLoading && topSellersData && topSellersData.length > 0 && (
+                <div className="bg-white border rounded-xl p-4 shadow-sm">
+                  <h3 className="font-bold text-gray-900 mb-3 text-sm flex items-center gap-2">
+                    <Users className="w-4 h-4 text-red-500" />
+                    Top Rated Sellers
+                  </h3>
+                  <div className="space-y-3">
+                    {topSellersData.slice(0, 4).map((seller) => (
+                      <div
+                        key={seller.id}
+                        className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg"
+                        onClick={() => navigate(`/seller/${seller.id}`)}
+                      >
+                        <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                          {seller.name?.charAt(0)?.toUpperCase() || "S"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-800 truncate">{seller.name}</p>
+                          <p className="text-[10px] text-red-600">{seller.totalListings} deals</p>
+                        </div>
+                        {seller.verificationStatus === "verified" && <BadgeCheck className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Why Shop With Us */}
               <div className="bg-white border border-gray-200 rounded-xl p-4">

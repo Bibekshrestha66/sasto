@@ -1,8 +1,6 @@
-import { eq, desc, and, gte, gt, lte, like, isNull, sql, or } from "drizzle-orm/sql";
-import { drizzle as sqliteDrizzle } from "drizzle-orm/better-sqlite3";
+import { eq, desc, and, gte, gt, lte, like, isNull, sql, or, not } from "drizzle-orm/sql";
 import { drizzle as pgDrizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import Database from "better-sqlite3";
 import { 
   InsertUser, users, 
   listings, categories, auctions, bids, messages, reviews, bookings, favorites, notifications,
@@ -16,60 +14,26 @@ import path from "path";
 import { ENV } from './_core/env';
 import { decryptMessage } from "./_core/crypto";
 
-const fallbackSqliteUrl = "sqlite:./sqlite.db";
-const rawConnectionString = process.env.DATABASE_URL || fallbackSqliteUrl;
-const isSqlite = rawConnectionString.startsWith("sqlite:") || !rawConnectionString.includes("://");
+const rawConnectionString = process.env.DATABASE_URL;
+if (!rawConnectionString) {
+  throw new Error("DATABASE_URL environment variable is required for Postgres connection");
+}
 
 let _db: any = undefined;
 
-function getSqlitePath(connectionString: string) {
-  const stripped = connectionString.replace(/^sqlite:(\/\/)?/, "");
-  return path.resolve(stripped);
-}
-
-function initSqlite(connectionString: string) {
-  const sqlitePath = getSqlitePath(connectionString);
-
-  try {
-    const sqliteDir = path.dirname(sqlitePath);
-    if (sqliteDir && sqliteDir !== "." && !fs.existsSync(sqliteDir)) {
-      fs.mkdirSync(sqliteDir, { recursive: true });
-    }
-  } catch (err) {
-    console.warn("[Database] Failed to create SQLite directory:", err);
-  }
-
-  const sqlite = new Database(sqlitePath, { fileMustExist: false });
-  return sqliteDrizzle(sqlite, { schema });
-}
-
-async function initPostgres(connectionString: string) {
-  const sql = postgres(connectionString, {
-    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+function initPostgres(connectionString: string) {
+  const sqlConnection = postgres(connectionString, {
+    ssl: { rejectUnauthorized: false }, // Use SSL by default for NeonDB compatibility
   });
-
-  // Verify the connection immediately and fall back if the host is unreachable.
-  await sql`select 1`;
-
-  return pgDrizzle(sql, { schema });
+  return pgDrizzle(sqlConnection, { schema });
 }
 
 try {
-  if (isSqlite) {
-    _db = initSqlite(rawConnectionString);
-    console.info("[Database] Initialized SQLite at", getSqlitePath(rawConnectionString));
-  } else {
-    try {
-      _db = await initPostgres(rawConnectionString);
-      console.info("[Database] Initialized Postgres via DATABASE_URL");
-    } catch (err) {
-      console.warn("[Database] Postgres init failed; falling back to SQLite:", err);
-      _db = initSqlite(fallbackSqliteUrl);
-      console.info("[Database] Initialized fallback SQLite at", getSqlitePath(fallbackSqliteUrl));
-    }
-  }
+  _db = initPostgres(rawConnectionString);
+  console.info("[Database] Initialized Postgres via DATABASE_URL");
 } catch (err) {
-  console.error("[Database] Failed to initialize DB:", err);
+  console.error("[Database] Failed to initialize Postgres DB:", err);
+  throw err;
 }
 
 export const db = _db;
@@ -258,46 +222,76 @@ export async function searchListings(query: string, limit: number = 20) {
 }
 
 // Category queries
+function normalizeCategoryName(category: any) {
+  if (!category || typeof category.name !== "string") return category;
+  const normalized = category.name.replace(/\s+(Auctions?|Rentals?)$/i, "");
+  return normalized === category.name ? category : { ...category, name: normalized };
+}
+
 export async function getCategories(sector?: string) {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select().from(categories).where(isNull(categories.parentId));
-  
+  const rootCategoryQuery = db.select().from(categories).where(and(
+    isNull(categories.parentId),
+    not(eq(categories.slug, "want-to-buy"))
+  ));
+
+  const mapResults = (rows: any[]) => rows.map(normalizeCategoryName);
+
   if (sector) {
-    return db.select().from(categories)
-      .where(and(
-        isNull(categories.parentId),
-        like(categories.sector, `%${sector}%`)
-      ))
+    const categoryConditions = [
+      isNull(categories.parentId),
+      or(
+        eq(categories.sector, sector),
+        eq(categories.sector, "all")
+      ),
+      not(eq(categories.slug, "want-to-buy"))
+    ];
+
+    const rows = await db.select().from(categories)
+      .where(and(...categoryConditions))
       .orderBy(categories.name);
+
+    return mapResults(rows);
   }
 
-  return query.orderBy(categories.name);
+  const rows = await rootCategoryQuery.orderBy(categories.name);
+  return mapResults(rows);
 }
 
 export async function getSubcategories(parentId: number, sector?: string) {
   const db = await getDb();
   if (!db) return [];
 
+  const mapResults = (rows: any[]) => rows.map(normalizeCategoryName);
+
   if (sector) {
-    return db.select().from(categories)
+    const rows = await db.select().from(categories)
       .where(and(
         eq(categories.parentId, parentId),
-        like(categories.sector, `%${sector}%`)
+        or(
+          eq(categories.sector, sector),
+          eq(categories.sector, "all")
+        )
       ))
       .orderBy(categories.name);
+
+    return mapResults(rows);
   }
 
-  return db.select().from(categories)
+  const rows = await db.select().from(categories)
     .where(eq(categories.parentId, parentId))
     .orderBy(categories.name);
+
+  return mapResults(rows);
 }
 
 export async function getAllCategories() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(categories).orderBy(categories.name);
+  const rows = await db.select().from(categories).orderBy(categories.name);
+  return rows.map(normalizeCategoryName);
 }
 
 // Auction queries

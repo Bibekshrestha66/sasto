@@ -316,7 +316,7 @@ export const sellerRouter = router({
         throw new Error("Listing not found or unauthorized");
       }
 
-      let discount = null;
+      let discount: number | null = null;
       if (input.originalPrice && input.originalPrice > input.price) {
         discount = Math.round(((input.originalPrice - input.price) / input.originalPrice) * 100);
       }

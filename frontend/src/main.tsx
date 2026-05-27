@@ -7,6 +7,10 @@ import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
+import { ClerkProvider } from "@clerk/clerk-react";
+
+console.log("[DEBUG] import.meta.env:", import.meta.env);
+console.log("[DEBUG] VITE_CLERK_PUBLISHABLE_KEY:", import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
 
 const queryClient = new QueryClient();
 
@@ -37,25 +41,48 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+const backendBase = (import.meta.env?.VITE_APP_URL as string) || "";
+const apiUrl = backendBase ? `${backendBase.replace(/\/$/, "")}/api/trpc` : "/api/trpc";
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: apiUrl,
       transformer: superjson,
-      fetch(input, init) {
+      async fetch(input, init) {
+        let token = "";
+        try {
+          if ((window as any).Clerk?.session) {
+            token = await (window as any).Clerk.session.getToken() || "";
+          }
+        } catch (e) {
+          console.error("Failed to get Clerk token", e);
+        }
+
         return globalThis.fetch(input, {
           ...(init ?? {}),
-          credentials: "include",
+          headers: {
+            ...(init?.headers ?? {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
         });
       },
     }),
   ],
 });
 
+const clerkPublishableKey = import.meta.env?.VITE_CLERK_PUBLISHABLE_KEY || "";
+
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
-      <App />
+      {clerkPublishableKey ? (
+        <ClerkProvider publishableKey={clerkPublishableKey} afterSignOutUrl="/">
+          <App />
+        </ClerkProvider>
+      ) : (
+        <App />
+      )}
     </QueryClientProvider>
   </trpc.Provider>
 );

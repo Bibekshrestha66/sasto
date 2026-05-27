@@ -48,7 +48,7 @@ export function AdSlot({
           borderRadius: "8px",
           padding: "10px",
         }}
-        data-ad-client={(import.meta as any).env.VITE_GOOGLE_ADSENSE_CLIENT_ID || ""}
+        data-ad-client={import.meta.env.VITE_GOOGLE_ADSENSE_CLIENT_ID || ""}
         data-ad-slot={adSlot}
         data-ad-format={adFormat}
         data-full-width={fullWidth}

@@ -28,7 +28,6 @@ import { adminRouter } from "./admin";
 import { rbacRouter } from "./rbac";
 import { adsRouter } from "./ads";
 import { emailsRouter } from "./emails";
-import { googleAuthRouter } from "./auth-google";
 import "dotenv/config";
 import { reviewsRouter } from "./reviews";
 import { rentalsRouter } from "./rentals";
@@ -37,6 +36,7 @@ import { sellerAnalyticsRouter } from "./seller-analytics";
 import { dealsRouter } from "./deals";
 import { verificationRouter } from "./verification";
 import { cartRouter } from "./cart";
+import { inngest } from "../inngest/client";
 
 export const appRouter = router({
   system: systemRouter,
@@ -49,132 +49,6 @@ export const appRouter = router({
       console.log(`[Auth] me query called, User: ${opts.ctx.user?.email || 'Guest'}`);
       return opts.ctx.user;
     }),
-    register: publicProcedure
-      .input(z.object({ 
-        name: z.string(), 
-        email: z.string().email(), 
-        password: z.string().min(6) 
-      }))
-      .mutation(async ({ input, ctx }) => {
-        console.log(`[Auth] Registration attempt for: ${input.email}`);
-        const existingUser = await getUserByEmail(input.email);
-        if (existingUser) {
-          throw new TRPCError({ code: "CONFLICT", message: "User with this email already exists" });
-        }
-
-        const hashedPassword = await bcrypt.hash(input.password, 10);
-        const openId = `local_${Math.random().toString(36).substring(2, 11)}`;
-
-        console.log(`[Auth] Creating new user: ${input.email} with openId: ${openId}`);
-        const result = await db.insert(users).values({
-          name: input.name,
-          email: input.email,
-          password: hashedPassword,
-          openId: openId,
-          role: "user",
-          lastSignedIn: new Date(),
-        }).returning();
-
-        console.log(`[Auth] Registration successful for ${input.email}`);
-
-        const user = result[0];
-        const token = await authService.createSessionToken(user.openId, { name: user.name || "" });
-        const cookieOptions = getSessionCookieOptions(ctx.req);
-        ctx.res.cookie(COOKIE_NAME, token, cookieOptions);
-
-        // Send welcome email
-        try {
-          await emailService.sendEmail({
-            to: user.email || "",
-            subject: "Welcome to Sasto Marketplace!",
-            template: "welcome_email",
-            templateData: { userName: user.name || "User" },
-            userId: user.id
-          });
-        } catch (e) {
-          console.error("Failed to send welcome email:", e);
-        }
-
-        return user;
-      }),
-    login: publicProcedure
-      .input(z.object({ email: z.string().email(), password: z.string() }))
-      .mutation(async ({ input, ctx }) => {
-        const user = await getUserByEmail(input.email);
-        console.log(`[Auth] Login attempt for: ${input.email}, User found: ${!!user}`);
-        
-        if (!user || !user.password) {
-          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
-        }
-
-        const isValid = await bcrypt.compare(input.password, user.password);
-        console.log(`[Auth] Password match result: ${isValid}`);
-        
-        if (!isValid) {
-          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
-        }
-
-        console.log(`[Auth] Manual login successful for ${user.email}`);
-
-        const token = await authService.createSessionToken(user.openId, { name: user.name || "" });
-        const cookieOptions = getSessionCookieOptions(ctx.req);
-        ctx.res.cookie(COOKIE_NAME, token, cookieOptions);
-
-        return user;
-      }),
-    googleSignIn: googleAuthRouter.signIn,
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return { success: true } as const;
-    }),
-    requestPasswordReset: publicProcedure
-      .input(z.object({ email: z.string().email() }))
-      .mutation(async ({ input }) => {
-        const user = await getUserByEmail(input.email);
-        if (!user) return { success: true };
-
-        const token = nanoid(32);
-        const expires = new Date(Date.now() + 3600000); // 1 hour
-
-        await db.update(users)
-          .set({ resetToken: token, resetTokenExpires: expires })
-          .where(eq(users.id, user.id));
-
-        await emailService.sendEmail({
-          to: user.email!,
-          subject: "Reset your password",
-          template: "password_reset",
-          templateData: {
-            resetLink: `${process.env.VITE_APP_URL || 'http://localhost:3000'}/reset-password?token=${token}`
-          },
-          userId: user.id
-        });
-
-        return { success: true };
-      }),
-    resetPassword: publicProcedure
-      .input(z.object({ token: z.string(), password: z.string().min(6) }))
-      .mutation(async ({ input }) => {
-        const user = await db.query.users.findFirst({
-          where: eq(users.resetToken, input.token)
-        });
-
-        if (!user || !user.resetTokenExpires || user.resetTokenExpires < new Date()) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid or expired reset token" });
-        }
-
-        const hashedPassword = await bcrypt.hash(input.password, 10);
-        await db.update(users)
-          .set({ 
-            password: hashedPassword, 
-            resetToken: null, 
-            resetTokenExpires: null 
-          })
-          .where(eq(users.id, user.id));
-
-        return { success: true };
-      }),
     updateProfile: protectedProcedure
       .input(z.object({
         name: z.string().optional(),
@@ -333,7 +207,42 @@ export const appRouter = router({
           color: input.color,
           condition: input.condition,
           status: "active",
-        });
+        }).returning();
+
+        // Fire Inngest background job for listing created
+        const newListing = result[0];
+        if (newListing) {
+          await inngest.send({
+            name: "listing/change",
+            data: { action: "created", listingId: newListing.id, title: newListing.title, userId: ctx.user.id },
+          });
+          // Also queue a welcome / listing-published email
+          await inngest.send({
+            name: "email/queued",
+            data: { reason: "listing_created", listingId: newListing.id },
+          });
+
+          // If this is an auction listing, create the auction record and trigger the Inngest auction close scheduler
+          if (newListing.type === "auction") {
+            const startingPrice = newListing.price ? Number(newListing.price) : 0;
+            // Default auction duration of 7 days if not specified
+            const endTime = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+            const [newAuction] = await db.insert(auctions).values({
+              listingId: newListing.id,
+              startingPrice: startingPrice.toString(),
+              currentBid: startingPrice.toString(),
+              endTime,
+              status: "active",
+            }).returning();
+
+            if (newAuction) {
+              await inngest.send({
+                name: "auction/created",
+                data: { auctionId: newAuction.id, endTime: endTime.toISOString() },
+              });
+            }
+          }
+        }
 
         return result;
       }),
@@ -361,8 +270,15 @@ export const appRouter = router({
             description: input.description || listing.description,
             price: input.price || listing.price,
             status: input.status || listing.status,
+            updatedAt: new Date(),
           })
           .where(eq(listings.id, input.id));
+
+        // Fire Inngest background job for listing updated
+        await inngest.send({
+          name: "listing/change",
+          data: { action: "updated", listingId: input.id, title: input.title || listing.title, userId: ctx.user.id },
+        });
 
         return result;
       }),
@@ -378,7 +294,15 @@ export const appRouter = router({
           throw new Error("Unauthorized");
         }
 
-        return db.delete(listings).where(eq(listings.id, input));
+        await db.delete(listings).where(eq(listings.id, input));
+
+        // Fire Inngest background job for listing deleted
+        await inngest.send({
+          name: "listing/change",
+          data: { action: "deleted", listingId: input, title: listing.title, userId: ctx.user.id },
+        });
+
+        return { success: true };
       }),
   }),
 
@@ -767,7 +691,7 @@ export const appRouter = router({
         const configResult = await db.select().from(companyConfigs).limit(1);
         const commissionRate = configResult.length > 0 ? configResult[0].commissionRate : 0;
 
-        const createdTransactions = [];
+        const createdTransactions: any[] = [];
         const wsManager = getWebSocketManager();
 
         for (const item of cart.items) {

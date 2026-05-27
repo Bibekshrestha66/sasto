@@ -1,8 +1,9 @@
 import "dotenv/config";
 if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
 console.log("[Startup] NODE_ENV:", process.env.NODE_ENV);
-console.log("[Startup] VITE_GOOGLE_CLIENT_ID:", process.env.VITE_GOOGLE_CLIENT_ID ? "SET" : "NOT SET");
-console.log("[Startup] GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID ? "SET" : "NOT SET");
+console.log("[Startup] CLERK_SECRET_KEY:", process.env.CLERK_SECRET_KEY ? "SET" : "NOT SET");
+console.log("[Startup] DATABASE_URL:", process.env.DATABASE_URL ? "SET" : "NOT SET");
+console.log("[Startup] INNGEST_EVENT_KEY:", process.env.INNGEST_EVENT_KEY ? "SET" : "NOT SET");
 import express from "express";
 import { createServer } from "http";
 import os from "os";
@@ -19,7 +20,9 @@ import { COOKIE_NAME } from "@shared/const";
 import { ENV } from "./env";
 import * as db from "../db";
 import * as schema from "../../drizzle/schema";
+import { seedCategories } from "../seeds/categories.seed";
 import { uploadRouter } from "../upload";
+import { inngestHandler } from "../inngest/index";
 
 async function startServer() {
   const app = express();
@@ -27,15 +30,16 @@ async function startServer() {
 
   // Content Security Policy
   app.use((_req, res, next) => {
-    const isDev = process.env.NODE_ENV === "development";
+    const isDev = process.env.NODE_ENV === "development" || !process.env.NODE_ENV || process.env.NODE_ENV === "test";
     const cspDirectives = [
       "default-src 'self'",
-      `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""} https://accounts.google.com`,
+      `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""} https://accounts.google.com https://*.clerk.accounts.dev https://clerk.sasto.com.np https://clerk.browser.js https://*.clerk.com`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: https://picsum.photos https://*.picsum.photos https://images.unsplash.com https://res.cloudinary.com https://*.amazonaws.com https://placehold.co https://github.com https://*.githubusercontent.com https://via.placeholder.com",
-      `connect-src 'self' ${isDev ? "ws: wss:" : ""} https://accounts.google.com`,
+      "img-src 'self' data: https://picsum.photos https://*.picsum.photos https://images.unsplash.com https://res.cloudinary.com https://*.amazonaws.com https://*.r2.cloudflarestorage.com https://*.r2.dev https://placehold.co https://github.com https://*.githubusercontent.com https://*.googleusercontent.com https://via.placeholder.com https://img.clerk.com https://clerk.com",
+      `connect-src 'self' ${isDev ? "ws: wss:" : ""} https://accounts.google.com https://*.clerk.com https://*.clerk.accounts.dev https://clerk.sasto.com.np https://clerk.browser.js`,
       "font-src 'self' https://fonts.gstatic.com",
-      "frame-src https://accounts.google.com",
+      "frame-src https://accounts.google.com https://*.clerk.accounts.dev https://clerk.sasto.com.np https://*.clerk.com",
+      "worker-src 'self' blob:",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -49,6 +53,23 @@ async function startServer() {
   // Initialize WebSocket
   const wsManager = initializeWebSocket(server);
   console.log("[WebSocket] Initialized");
+
+  // Initialize Inngest Background Jobs Handler
+  app.use("/api/inngest", inngestHandler);
+  console.log("[Inngest] Background jobs endpoint mounted on /api/inngest");
+
+  // Initialize PayloadCMS v3 via Local API
+  // The admin UI requires Next.js; here we initialize the Local API for server-side CMS operations.
+  try {
+    const { getPayload } = await import("payload");
+    const payloadConfigModule = await import("../../payload.config");
+    const payloadInstance = await getPayload({ config: payloadConfigModule.default });
+    // Expose payload on app.locals for use in routes
+    (app as any).locals.payload = payloadInstance;
+    console.info("[CMS] Payload CMS v3 Local API initialized successfully");
+  } catch (err) {
+    console.warn("[CMS] Payload CMS failed to initialize (non-fatal):", (err as Error).message);
+  }
 
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
@@ -138,26 +159,7 @@ async function startServer() {
   );
   // Dev backdoor to login as super admin
   app.get("/api/dev/force-login", async (req, res) => {
-    try {
-      const openId = ENV.ownerOpenId;
-      const name = "Bibek Shrestha"; // Using the name from todo.md
-
-      await db.upsertUser({
-        openId,
-        name,
-        email: "bibekshrestha66@gmail.com",
-        lastSignedIn: new Date(),
-      });
-
-      const token = await authService.createSessionToken(openId, { name });
-      const cookieOptions = getSessionCookieOptions(req as any);
-      res.cookie(COOKIE_NAME, token, cookieOptions);
-      console.log(`[Dev] Forced login for ${name} (${openId})`);
-      res.redirect("/super-admin/dashboard");
-    } catch (err) {
-      console.error("[Dev] Force login failed:", err);
-      res.status(500).send("Force login failed");
-    }
+    res.status(500).send("Force login disabled — Clerk login required");
   });
 
   // Debug endpoint to verify environment configuration
@@ -165,47 +167,22 @@ async function startServer() {
     if (process.env.NODE_ENV !== "development") {
       return res.status(403).json({ error: "Not available in production" });
     }
-    // Return what the frontend would see via import.meta.env
     res.json({
       NODE_ENV: process.env.NODE_ENV,
       VITE_APP_URL: process.env.VITE_APP_URL,
       VITE_GOOGLE_CLIENT_ID: process.env.VITE_GOOGLE_CLIENT_ID || "NOT SET",
       VITE_APP_ID: process.env.VITE_APP_ID,
-      // Backend-only configs
-      GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? "***" : "NOT SET",
-      COOKIE_SECRET: process.env.COOKIE_SECRET ? "***" : "NOT SET",
     });
   });
 
   // Simple dev-only endpoint to check the authenticated user from TRPC context
   app.get("/api/debug/me", async (req, res) => {
-    if (process.env.NODE_ENV !== "development") {
-      return res.status(403).json({ error: "Not available in production" });
-    }
-    try {
-      const ctx = await createContext({ req, res } as any);
-      return res.json({ user: ctx.user });
-    } catch (err) {
-      console.error("/api/debug/me error:", err);
-      return res.status(500).json({ error: String(err) });
-    }
+    return res.json({ message: "Clerk-based authentication debug" });
   });
 
   // Dev-only: verify the raw session cookie using authService.verifySession
   app.get('/api/debug/verify-token', async (req, res) => {
-    if (process.env.NODE_ENV !== 'development') {
-      return res.status(403).json({ error: 'Not available in production' });
-    }
-    try {
-      const cookieHeader = req.headers.cookie || '';
-      const parsed = parseCookie(cookieHeader || '');
-      const token = parsed[COOKIE_NAME];
-      const result = await authService.verifySession(token);
-      return res.json({ tokenSnippet: token ? token.slice(0, 60) : null, session: result });
-    } catch (err) {
-      console.error('/api/debug/verify-token error:', err);
-      return res.status(500).json({ error: String(err) });
-    }
+    return res.json({ message: "Clerk token verification required via Authorization header" });
   });
 
   // development mode uses Vite, production mode uses static files
@@ -251,6 +228,13 @@ async function startServer() {
       console.log(`[WebSocket] Available at ws://${localIp}:${port}`);
     });
   };
+
+  try {
+    console.log("[Startup] Ensuring category taxonomy is seeded.");
+    await seedCategories();
+  } catch (err) {
+    console.warn("[Startup] Category seeding failed:", err);
+  }
 
   listen(preferredPort, 20);
 }

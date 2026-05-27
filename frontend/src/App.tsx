@@ -7,7 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
-import { GoogleOAuthProvider } from "@react-oauth/google";
+import { ClerkProvider } from "@clerk/clerk-react";
 import { Loader2 } from "lucide-react";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -133,19 +133,19 @@ function AppContent() {
   );
 }
 
-function App() {
-  const googleClientId = (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || "";
+const AppInner = () => (
+  <ThemeProvider defaultTheme="light">
+    <TooltipProvider>
+      <Toaster />
+      <AppContent />
+    </TooltipProvider>
+  </ThemeProvider>
+);
 
+function App() {
   return (
     <ErrorBoundary>
-      <GoogleOAuthProvider clientId={googleClientId}>
-        <ThemeProvider defaultTheme="light">
-          <TooltipProvider>
-            <Toaster />
-            <AppContent />
-          </TooltipProvider>
-        </ThemeProvider>
-      </GoogleOAuthProvider>
+      <AppInner />
     </ErrorBoundary>
   );
 }

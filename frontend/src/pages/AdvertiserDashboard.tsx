@@ -322,7 +322,7 @@ const RegisterAdvertiserForm: React.FC = () => {
 
 // Helper Functions
 function generateChartData(ads: any[]) {
-  const data = [];
+  const data: any[] = [];
   for (let i = 6; i >= 0; i--) {
     const date = new Date();
     date.setDate(date.getDate() - i);

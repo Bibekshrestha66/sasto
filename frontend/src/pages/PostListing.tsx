@@ -70,6 +70,7 @@ export default function PostListing() {
   const currentSector = formData.type === "rent" ? "rental" : formData.type === "auction" ? "auction" : "marketplace";
 
   const { data: categories } = trpc.categories.list.useQuery({ sector: currentSector });
+  const visibleCategories = categories?.filter((cat: any) => cat.slug !== "want-to-buy" && cat.slug !== "kids-clothing");
 
   const { data: subCategories, isLoading: subLoading } = trpc.categories.getSubcategories.useQuery(
     { parentId: parseInt(formData.category, 10), sector: currentSector },
@@ -193,6 +194,26 @@ export default function PostListing() {
       | React.ChangeEvent<HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+
+    if (name === "type") {
+      setFormData((prev) => ({
+        ...prev,
+        type: value,
+        category: "",
+        subCategory: "",
+      }));
+      return;
+    }
+
+    if (name === "category") {
+      setFormData((prev) => ({
+        ...prev,
+        category: value,
+        subCategory: "",
+      }));
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -415,7 +436,7 @@ export default function PostListing() {
                     required
                   >
                     <option value="">Select Category</option>
-                    {categories?.map((cat) => (
+                    {visibleCategories?.map((cat) => (
                       <option key={cat.id} value={cat.id}>
                         {cat.name}
                       </option>

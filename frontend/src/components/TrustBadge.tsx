@@ -21,7 +21,12 @@ export function TrustBadge({ userId, compact = false }: TrustBadgeProps) {
     return null;
   }
 
-  const badges = [];
+  const badges: Array<{
+    icon: React.ComponentType<any>;
+    label: string;
+    color: string;
+    tooltip: string;
+  }> = [];
 
   // Verified Seller Badge
   if (verifiedPurchaseCount >= 5) {

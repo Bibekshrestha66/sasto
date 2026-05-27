@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { notifyOwner } from "./notification";
 import { adminProcedure, publicProcedure, router } from "./trpc";
-import { getCompanyConfig, getCareers, submitReport, getActivePaymentGateways } from "../db";
+import { getCompanyConfig, getCareers, submitReport, getActivePaymentGateways, getDb } from "../db";
+import { count, eq } from "drizzle-orm";
+import { users, listings, transactions } from "../../drizzle/schema";
 
 export const systemRouter = router({
   health: publicProcedure
@@ -52,4 +54,27 @@ export const systemRouter = router({
   getActivePaymentGateways: publicProcedure.query(async () => {
     return getActivePaymentGateways();
   }),
+
+  // Real-time platform statistics for About and Help pages
+  getPlatformStats: publicProcedure.query(async () => {
+    try {
+      const db = await getDb();
+
+      const [totalUsersResult, activeListingsResult, totalTransactionsResult] = await Promise.all([
+        db.select({ count: count() }).from(users),
+        db.select({ count: count() }).from(listings).where(eq(listings.status, "active")),
+        db.select({ count: count() }).from(transactions),
+      ]);
+
+      return {
+        totalUsers: Number(totalUsersResult[0]?.count || 0),
+        activeListings: Number(activeListingsResult[0]?.count || 0),
+        totalTransactions: Number(totalTransactionsResult[0]?.count || 0),
+      };
+    } catch (error) {
+      console.error("[systemRouter] getPlatformStats error:", error);
+      return { totalUsers: 0, activeListings: 0, totalTransactions: 0 };
+    }
+  }),
 });
+

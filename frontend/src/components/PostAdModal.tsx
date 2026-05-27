@@ -42,7 +42,7 @@ async function cropToRatio(file: File, ratio = 4 / 3): Promise<File> {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CATEGORIES = [
+const FALLBACK_MARKETPLACE_CATEGORIES = [
   { id: 1, name: "Mobile Phones", icon: "📱" },
   { id: 2, name: "Electronics & Appliances", icon: "📺" },
   { id: 3, name: "Vehicles", icon: "🚗" },
@@ -51,11 +51,38 @@ const CATEGORIES = [
   { id: 6, name: "Services", icon: "🔧" },
   { id: 7, name: "Fashion & Beauty", icon: "👗" },
   { id: 8, name: "Pets & Animals", icon: "🐕" },
-  { id: 9, name: "Books & Sports", icon: "📚" },
+  { id: 9, name: "Books & Education", icon: "📚" },
   { id: 10, name: "Furniture & Household", icon: "🛋️" },
   { id: 11, name: "Kids & Babies", icon: "👶" },
-  { id: 12, name: "Commercial & Industrial", icon: "🏭" },
+  { id: 12, name: "Commercial", icon: "🏭" },
+  { id: 13, name: "Agriculture", icon: "🌾" },
+  { id: 14, name: "Digital", icon: "💻" },
+  { id: 15, name: "Groceries", icon: "🛒" },
+  { id: 16, name: "Medical", icon: "🩺" },
+  { id: 17, name: "Rooms", icon: "🛏️" },
 ];
+
+const FALLBACK_AUCTION_CATEGORIES = [
+  { id: 101, name: "Property", icon: "🏠" },
+  { id: 102, name: "Vehicle", icon: "🚗" },
+  { id: 103, name: "Electronics", icon: "💻" },
+  { id: 104, name: "Collectibles & Luxury", icon: "💎" },
+];
+
+const FALLBACK_RENTAL_CATEGORIES = [
+  { id: 201, name: "Property", icon: "🏘️" },
+  { id: 202, name: "Vehicles", icon: "🚘" },
+  { id: 203, name: "Commercial", icon: "🏢" },
+  { id: 204, name: "Equipment", icon: "🛠️" },
+  { id: 205, name: "Electronics", icon: "💻" },
+  { id: 206, name: "Skills", icon: "🧑‍🏫" },
+];
+
+function getFallbackCategories(sector: string) {
+  if (sector === "auction") return FALLBACK_AUCTION_CATEGORIES;
+  if (sector === "rental") return FALLBACK_RENTAL_CATEGORIES;
+  return FALLBACK_MARKETPLACE_CATEGORIES;
+}
 
 const LISTING_TYPES = [
   { value: "marketplace", label: "Marketplace (Buy/Sell)" },
@@ -127,6 +154,15 @@ export default function PostAdModal({ isOpen, onClose }: PostAdModalProps) {
   const [pendingCropUrl, setPendingCropUrl] = useState<string | null>(null);
   const [isCropping, setIsCropping] = useState(false);
 
+  // Fetch categories from backend; fall back to local list if unavailable
+  const currentSector = listingType || "marketplace";
+  const { data: fetchedCategories = [], isLoading: categoriesLoading } = trpc.categories.list.useQuery({ sector: currentSector });
+  const visibleCategories = (fetchedCategories && fetchedCategories.length > 0)
+    ? fetchedCategories
+        .filter((c: any) => c.slug !== "want-to-buy" && c.slug !== "kids-clothing")
+        .map((c: any) => ({ id: c.id, name: c.name, icon: c.icon || "📌" }))
+    : getFallbackCategories(currentSector);
+
   const createListingMutation = trpc.listings.create.useMutation({
     onSuccess: () => {
       toast.success("Listing created successfully!");
@@ -171,6 +207,10 @@ export default function PostAdModal({ isOpen, onClose }: PostAdModalProps) {
   useEffect(() => {
     if (!isOpen) resetForm();
   }, [isOpen, resetForm]);
+
+  useEffect(() => {
+    setSelectedCategory(null);
+  }, [listingType]);
 
   const validateFile = (file: File): boolean => {
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
@@ -364,7 +404,7 @@ export default function PostAdModal({ isOpen, onClose }: PostAdModalProps) {
               <div>
                 <label className="block text-sm font-medium mb-3">Select Category</label>
                 <div className="grid grid-cols-3 gap-2 max-h-80 overflow-y-auto p-1">
-                  {CATEGORIES.map((cat) => (
+                  {(categoriesLoading ? getFallbackCategories(currentSector) : visibleCategories).map((cat) => (
                     <button key={cat.id} type="button" onClick={() => setSelectedCategory(cat.id)}
                       className={`p-3 text-center border-2 rounded-lg transition ${selectedCategory === cat.id ? "border-green-600 bg-green-50" : "border-gray-200 hover:border-green-300"}`}>
                       <div className="text-2xl mb-1">{cat.icon}</div>
@@ -576,7 +616,7 @@ export default function PostAdModal({ isOpen, onClose }: PostAdModalProps) {
             <Card className="p-4 space-y-3">
               <div className="grid grid-cols-2 gap-4">
                 <div><p className="text-xs text-gray-500">Type</p><p className="font-medium capitalize">{listingType}</p></div>
-                <div><p className="text-xs text-gray-500">Category</p><p className="font-medium">{CATEGORIES.find((c) => c.id === selectedCategory)?.name || "—"}</p></div>
+                <div><p className="text-xs text-gray-500">Category</p><p className="font-medium">{visibleCategories.find((c) => c.id === selectedCategory)?.name || "—"}</p></div>
                 <div><p className="text-xs text-gray-500">Title</p><p className="font-medium">{formData.title || "—"}</p></div>
                 <div><p className="text-xs text-gray-500">Price</p><p className="font-medium">Rs. {formData.price?.toLocaleString() || "—"}{formData.originalPrice && formData.originalPrice > formData.price! && <span className="ml-2 text-xs line-through text-gray-400">Rs. {formData.originalPrice.toLocaleString()}</span>}</p></div>
               </div>

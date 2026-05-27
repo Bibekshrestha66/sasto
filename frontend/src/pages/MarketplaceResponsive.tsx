@@ -89,25 +89,7 @@ const FILTER_TABS = [
   { id: "popular", label: "Most Viewed" },
 ] as const;
 
-const SUBCATEGORIES_MAP: Record<string, string[]> = {
-  agriculture: ["Fertilizer", "Livestock", "Poultry", "Seeds", "Tools"].sort(),
-  books: ["Academic", "Children's Books", "Comics", "Fiction", "Magazines", "Non-Fiction", "Religious", "Textbooks"].sort(),
-  commercial: ["Building", "Co-working", "Industrial", "Land", "Office Space", "Restaurant Space", "Retail Shop", "Warehouse"].sort(),
-  digital: ["Digital Art", "Games", "Projects", "Software", "Web Services"].sort(),
-  electronics: ["Accessories", "Audio Devices", "Cameras", "Gaming", "Laptops", "Mobile Phones", "Tablets", "TV & Video"].sort(),
-  fashion: ["Accessories", "Bags", "Jewelry", "Kids' Clothing", "Men's Clothing", "Watches", "Women's Clothing", "Footwear"].sort(),
-  furniture: ["Beds", "Chairs", "Decor", "Garden Furniture", "Office Furniture", "Sofas", "Tables", "Wardrobes"].sort(),
-  groceries: ["Beverages", "Dairy", "Fruits & Veg", "Meat", "Pantry", "Snacks"].sort(),
-  jobs: ["Accounting & Finance", "Blue Collar/Labor", "Customer Service", "Education", "Engineering", "Healthcare", "IT & Software", "Sales & Marketing"].sort(),
-  kids: ["Baby Clothing", "Diapering", "Feeding", "Kids Clothing", "Maternity", "Nursery Furniture", "Strollers", "Toys"].sort(),
-  medical: ["First Aid", "Herbal", "Medical Accessories", "Medicines", "Wellness"].sort(),
-  pets: ["Birds", "Cats", "Dogs", "Fish", "Pet Accessories", "Pet Food", "Pet Services", "Small Pets"].sort(),
-  property: ["Apartment", "Commercial", "House", "Land", "Office Space", "Others", "Shop"].sort(),
-  rooms: ["Bachelor Pad", "Entire Apartment", "PG/Hostel", "Private Room", "Shared Room", "Studio"].sort(),
-  services: ["Carpentry", "Cleaning", "Consulting", "Design", "Electrical", "Painting", "Plumbing", "Web Development"].sort(),
-  sports: ["Camping", "Cycling", "Fitness", "Gym Equipment", "Outdoor Gear", "Swimming", "Team Sports", "Yoga"].sort(),
-  vehicles: ["Bicycles", "Cars", "Electric Vehicles", "Motorcycles", "Scooters", "Spare Parts", "SUVs", "Trucks"].sort(),
-};
+// Subcategories are loaded live from the database — no static map needed
 
 const ALL_CATEGORIES_SORTED = [
   { id: "agriculture", name: "Agriculture", icon: Sprout, hasSub: true },
@@ -312,36 +294,26 @@ export function MarketplaceResponsive() {
   const [priceMax, setPriceMax] = useState(1000000);
   const [sortBy, setSortBy] = useState("newest");
 
-  const categoryMap: Record<string, number> = {
-    agriculture: 9,
-    books: 11,
-    commercial: 13,
-    digital: 8,
-    electronics: 1,
-    fashion: 2,
-    furniture: 3,
-    groceries: 6,
-    jobs: 14,
-    kids: 15,
-    medical: 7,
-    pets: 16,
-    property: 5,
-    rooms: 17,
-    services: 12,
-    sports: 10,
-    vehicles: 4,
-  };
+  // Real category IDs from the database — no hardcoded map
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | null>(null);
+
+  // Fetch real categories from DB to resolve slug → numeric ID
+  const { data: dbCategories } = trpc.categories.list.useQuery(
+    { sector: "marketplace" },
+    { staleTime: 1000 * 60 * 5, refetchOnWindowFocus: false }
+  );
+
+  // Fetch real subcategories for the currently selected parent category
+  const { data: dbSubcategories } = trpc.categories.getSubcategories.useQuery(
+    { parentId: selectedCategoryId ?? 0, sector: "marketplace" },
+    { enabled: !!selectedCategoryId, staleTime: 1000 * 60 * 5, refetchOnWindowFocus: false }
+  );
 
   // ---------- FIX #3: Replace top sellers data source ----------
-  const MOCK_TOP_SELLERS: TopSeller[] = [
-    { id: "1", name: "Sasto Traders", totalListings: 45, verificationStatus: "verified" },
-    { id: "2", name: "Nepal Electronics", totalListings: 32, verificationStatus: "verified" },
-    { id: "3", name: "KTM Mobiles", totalListings: 28, verificationStatus: "verified" },
-    { id: "4", name: "Bhatbhateni Deals", totalListings: 19, verificationStatus: "unverified" },
-    { id: "5", name: "Elite Motors", totalListings: 15, verificationStatus: "verified" }
-  ];
-  const topSellersData = MOCK_TOP_SELLERS;
-  const topSellersLoading = false;
+  const { data: topSellersData, isLoading: topSellersLoading } = trpc.search.topSellers.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
 
   const utils = trpc.useContext();
   const addToCartMutation = trpc.cart.addItem.useMutation({
@@ -365,48 +337,35 @@ export function MarketplaceResponsive() {
   };
 
   // ---------- FIX #4 & #5: Trending locations from backend ----------
-  const MOCK_TRENDING_LOCATIONS: TrendingLocation[] = [
-    { name: "Kathmandu", count: 124, rating: 4.8 },
-    { name: "Lalitpur", count: 85, rating: 4.7 },
-    { name: "Pokhara", count: 62, rating: 4.9 },
-    { name: "Bhaktapur", count: 43, rating: 4.6 },
-    { name: "Chitwan", count: 29, rating: 4.5 }
-  ];
-  const trendingLocationsData = MOCK_TRENDING_LOCATIONS;
-  const trendingLoading = false;
+  const { data: trendingLocationsData, isLoading: trendingLoading } = trpc.search.trendingLocations.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
 
   // ---------- Main listings query ----------
+  // Use subcategory ID first (most specific), then parent category ID, then no filter
+  const activeCategoryId = selectedSubcategoryId ?? selectedCategoryId ?? undefined;
+
   const { data: searchResults, isLoading, error } = trpc.search.advanced.useQuery({
     query: searchQuery || undefined,
-    category: category !== "all" ? categoryMap[category] : undefined,
+    category: activeCategoryId !== undefined ? activeCategoryId : undefined,
     minPrice: priceMin > 0 ? priceMin : undefined,
     maxPrice: priceMax < 1000000 ? priceMax : undefined,
     district: district !== "all" ? district : undefined,
     brand: brand || undefined,
     model: model || undefined,
     color: color !== "all" ? color : undefined,
-    // FIX #1: Use condition values that match listing.condition
     condition: condition === "all" ? undefined : (condition === "new" || condition === "like-new" ? "excellent" : (condition === "good" ? "good" : "fair")) as any,
     sortBy: sortBy === "newest" ? "newest" : sortBy === "price_low" ? "price-low" : sortBy === "price_high" ? "price-high" : "popular",
     page: currentPage,
     limit: itemsPerPage,
   });
 
-  const { data: analytics } = trpc.admin.getAnalytics.useQuery();
+  // admin.getAnalytics is an admin-only endpoint — never call it for guests to avoid 403 errors
   const { data: realAds } = trpc.ads.getActiveAds.useQuery({ placement: "sidebar_right" });
 
-  // FIX #2: Client‑side subcategory filtering
+  // Listings are now filtered server-side by real numeric category/subcategory IDs
   const rawListings = searchResults?.results || [];
-  const filteredListings = useMemo(() => {
-    if (!subcategory) return rawListings;
-    return rawListings.filter((listing: Listing) => {
-      // Match against listing.subcategory or listing.category (case‑insensitive)
-      const listingSub = listing.subcategory?.toLowerCase() || "";
-      const listingCat = listing.category?.toLowerCase() || "";
-      const target = subcategory.toLowerCase();
-      return listingSub === target || listingCat === target;
-    });
-  }, [rawListings, subcategory]);
+  const filteredListings = rawListings;
 
   // Pagination based on filtered listings
   const totalFilteredCount = filteredListings.length;
@@ -421,9 +380,10 @@ export function MarketplaceResponsive() {
   const allAds = realAds || [];
   const visibleAds = allAds.filter((ad: any) => !hiddenAds.includes(ad.id));
 
-  const totalListings = analytics?.totalListings || searchResults?.total || 0;
-  const totalViews = (analytics as any)?.totalViews || 0;
-  const totalSellers = (analytics as any)?.totalSellers || 0;
+  // Use public searchResults for stats (admin analytics removed — admin-only endpoint)
+  const totalListings = searchResults?.total || 0;
+  const totalViews = 0;
+  const totalSellers = 0;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -435,7 +395,9 @@ export function MarketplaceResponsive() {
 
   // Sync scroll lock logic with auctions
   useEffect(() => {
-    setCurrentPage(1);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
   }, [category, subcategory, condition, searchQuery, sortBy, priceMin, priceMax]);
 
   if (error) {
@@ -561,6 +523,10 @@ export function MarketplaceResponsive() {
         : "bg-white text-gray-600 border border-gray-200 hover:bg-green-50"
         }`;
 
+      // Resolve the real numeric DB ID for this category slug
+      const resolveDbId = (slug: string) =>
+        dbCategories?.find((c: any) => c.slug === slug || c.name.toLowerCase() === slug.toLowerCase())?.id ?? null;
+
       if (!cat.hasSub) {
         return (
           <button
@@ -568,6 +534,8 @@ export function MarketplaceResponsive() {
             onClick={() => {
               setCategory(cat.id);
               setSubcategory("");
+              setSelectedCategoryId(null);
+              setSelectedSubcategoryId(null);
               setCurrentPage(1);
             }}
             className={buttonClassName}
@@ -579,12 +547,23 @@ export function MarketplaceResponsive() {
         );
       }
 
+      // Subcategories to show — only for the currently open dropdown, loaded from DB
+      const liveSubs = openDropdown === cat.id ? dbSubcategories : [];
+
       return (
-        <DropdownMenu 
-          key={cat.id} 
-          modal={false} 
-          open={openDropdown === cat.id} 
-          onOpenChange={(isOpen) => setOpenDropdown(isOpen ? cat.id : null)}
+        <DropdownMenu
+          key={cat.id}
+          modal={false}
+          open={openDropdown === cat.id}
+          onOpenChange={(isOpen) => {
+            const nextOpen = isOpen ? cat.id : null;
+            setOpenDropdown(nextOpen);
+            if (isOpen) {
+              // When opening, resolve and set the parent category numeric ID so the subcategories query fires
+              const dbId = resolveDbId(cat.id);
+              setSelectedCategoryId(dbId);
+            }
+          }}
         >
           <DropdownMenuTrigger asChild>
             <button
@@ -592,7 +571,6 @@ export function MarketplaceResponsive() {
               aria-label={`${cat.name} categories dropdown`}
               onPointerDown={(e) => {
                 if (e.pointerType === 'touch') {
-                  // Block Radix from auto-opening; record start position for tap-detection
                   e.preventDefault();
                   touchStartRef.current = { y: e.clientY, id: cat.id };
                 }
@@ -601,9 +579,15 @@ export function MarketplaceResponsive() {
                 if (e.pointerType === 'touch' && touchStartRef.current?.id === cat.id) {
                   const moved = Math.abs(e.clientY - touchStartRef.current.y);
                   touchStartRef.current = null;
-                  // Only open if finger barely moved (tap, not scroll)
                   if (moved < 8) {
-                    setOpenDropdown(prev => prev === cat.id ? null : cat.id);
+                    setOpenDropdown(prev => {
+                      const next = prev === cat.id ? null : cat.id;
+                      if (next) {
+                        const dbId = resolveDbId(cat.id);
+                        setSelectedCategoryId(dbId);
+                      }
+                      return next;
+                    });
                   }
                 }
               }}
@@ -621,31 +605,43 @@ export function MarketplaceResponsive() {
             className="w-48 max-h-80 overflow-y-auto"
           >
             <DropdownMenuItem onClick={() => {
+              const dbId = resolveDbId(cat.id);
               setCategory(cat.id);
               setSubcategory("");
+              setSelectedCategoryId(dbId);
+              setSelectedSubcategoryId(null);
               setCurrentPage(1);
               setOpenDropdown(null);
             }}>
               All {cat.name}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {SUBCATEGORIES_MAP[cat.id]?.map((sub) => (
-              <DropdownMenuItem key={sub} onClick={() => {
-                setCategory(cat.id);
-                setSubcategory(sub);
-                setCurrentPage(1);
-                setOpenDropdown(null);
-                showToast(`Showing: ${sub}`);
-              }}>
-                {sub}
-                {subcategory === sub && <span className="ml-auto text-green-600">✓</span>}
-              </DropdownMenuItem>
-            ))}
+            {liveSubs && liveSubs.length > 0 ? (
+              liveSubs.map((sub: any) => (
+                <DropdownMenuItem key={sub.id} onClick={() => {
+                  setCategory(cat.id);
+                  setSubcategory(sub.name);
+                  setSelectedSubcategoryId(sub.id);  // real DB numeric ID
+                  setCurrentPage(1);
+                  setOpenDropdown(null);
+                  showToast(`Showing: ${sub.name}`);
+                }}>
+                  {sub.name}
+                  {subcategory === sub.name && <span className="ml-auto text-green-600">✓</span>}
+                </DropdownMenuItem>
+              ))
+            ) : (
+              openDropdown === cat.id && (
+                <DropdownMenuItem disabled className="text-gray-400 text-xs">
+                  Loading subcategories…
+                </DropdownMenuItem>
+              )
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       );
     });
-  }, [category, subcategory, openDropdown]);
+  }, [category, subcategory, openDropdown, dbCategories, dbSubcategories]);
 
   // FIX #7: Removed priceAlert from UI – bell icon and related logic are gone
   const renderListingCard = useCallback((listing: Listing, isGridView: boolean) => {
@@ -1332,15 +1328,15 @@ export function MarketplaceResponsive() {
               <div className="bg-white border rounded-xl p-4">
                 <h3 className="font-bold text-sm mb-2">Get Updates</h3>
                 <p className="text-xs text-gray-500 mb-3">Get notified about new listings and deals</p>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="email"
                     value={newsletterEmail}
                     onChange={(e) => setNewsletterEmail(e.target.value)}
                     placeholder="Your email"
-                    className="flex-1 text-xs border rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-300"
+                    className="w-full text-xs border rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-300"
                   />
-                  <Button size="sm" className="h-7 text-[10px] bg-green-600 rounded-full px-3" onClick={handleSubscribe}>
+                  <Button size="sm" className="w-full sm:w-auto h-7 text-[10px] bg-green-600 rounded-full px-4 justify-center" onClick={handleSubscribe}>
                     Subscribe
                   </Button>
                 </div>

@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,129 +32,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FeaturedAdCarousel } from "@/components/FeaturedAdCarousel";
 
-// Rental data
-const RENTALS_DATA = [
-  {
-    id: 1,
-    title: "Luxury 2BHK Apartment in Thamel",
-    pricePerDay: 25000,
-    location: "Kathmandu, Bagmati",
-    sellerName: "Property Plus Realty",
-    verified: true,
-    rating: 4.8,
-    images: ["https://picsum.photos/id/106/400/300"],
-    category: "property",
-    subcategory: "apartment",
-    createdAt: "2025-05-01",
-    views: 1245,
-    description: "Beautiful luxury apartment in the heart of Thamel.",
-  },
-  {
-    id: 2,
-    title: "Honda City 2022 - Self Drive",
-    pricePerDay: 4500,
-    location: "Lalitpur, Bagmati",
-    sellerName: "Drive Easy Rentals",
-    verified: true,
-    rating: 4.7,
-    images: ["https://picsum.photos/id/111/400/300"],
-    category: "vehicles",
-    subcategory: "car",
-    createdAt: "2025-05-10",
-    views: 2341,
-    description: "Well-maintained Honda City 2022 model.",
-  },
-  {
-    id: 3,
-    title: "MacBook Pro M2 2023",
-    pricePerDay: 1500,
-    location: "Kathmandu, Bagmati",
-    sellerName: "Tech Rent Nepal",
-    verified: true,
-    rating: 4.9,
-    images: ["https://picsum.photos/id/0/400/300"],
-    category: "electronics",
-    subcategory: "laptop",
-    createdAt: "2025-05-15",
-    views: 987,
-    description: "Latest MacBook Pro with M2 chip.",
-  },
-  {
-    id: 4,
-    title: "Professional Camera Kit",
-    pricePerDay: 800,
-    location: "Pokhara, Gandaki",
-    sellerName: "Gear Rental Nepal",
-    verified: false,
-    rating: 4.6,
-    images: ["https://picsum.photos/id/96/400/300"],
-    category: "equipment",
-    subcategory: "camera",
-    createdAt: "2025-05-20",
-    views: 567,
-    description: "Professional camera kit for photography.",
-  },
-  {
-    id: 5,
-    title: "Commercial Space in New Road",
-    pricePerDay: 55000,
-    location: "Kathmandu, Bagmati",
-    sellerName: "Biz Space Nepal",
-    verified: true,
-    rating: 4.7,
-    images: ["https://picsum.photos/id/48/400/300"],
-    category: "commercial",
-    subcategory: "office",
-    createdAt: "2025-05-25",
-    views: 432,
-    description: "Prime commercial space in New Road.",
-  },
-  {
-    id: 6,
-    title: "Modern Studio in Jhamsikhel",
-    pricePerDay: 18000,
-    location: "Lalitpur, Bagmati",
-    sellerName: "Urban Rentals",
-    verified: true,
-    rating: 4.6,
-    images: ["https://picsum.photos/id/169/400/300"],
-    category: "property",
-    subcategory: "apartment",
-    createdAt: "2025-05-10",
-    views: 876,
-    description: "Modern studio apartment in Jhamsikhel.",
-  },
-  {
-    id: 7,
-    title: "Professional Web Developer",
-    pricePerDay: 5000,
-    location: "Kathmandu, Bagmati",
-    sellerName: "Dev Services",
-    verified: true,
-    rating: 4.9,
-    images: ["https://picsum.photos/id/1/400/300"],
-    category: "skills",
-    subcategory: "programming",
-    createdAt: "2025-05-28",
-    views: 312,
-    description: "Expert React developer available for daily hire.",
-  },
-  {
-    id: 8,
-    title: "Expert Plumber",
-    pricePerDay: 1500,
-    location: "Lalitpur, Bagmati",
-    sellerName: "Home Fix",
-    verified: true,
-    rating: 4.5,
-    images: ["https://picsum.photos/id/2/400/300"],
-    category: "skills",
-    subcategory: "repair",
-    createdAt: "2025-05-29",
-    views: 189,
-    description: "Experienced plumber for immediate repair jobs.",
-  },
-];
+// No mock data — production mode uses live database only
 
 const CATEGORIES = [
   { id: "all", name: "All Categories", icon: Sparkles },
@@ -214,8 +93,8 @@ const SUBCATEGORIES: Record<string, { id: string, name: string }[]> = {
     { id: "tutoring", name: "Tutoring" },
     { id: "warehouse", name: "Warehouse/Forklift Operator" },
     { id: "welder", name: "Welder" },
-    { id: "welder", name: "AI Skills" },
-    { id: "welder", name: "Others" },
+    { id: "ai_skills", name: "AI Skills" },
+    { id: "others", name: "Others" },
   ]
 };
 
@@ -238,7 +117,38 @@ export function RentalResponsive() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const touchStartRef = useRef<{ y: number; id: string } | null>(null);
 
-  let filteredRentals = RENTALS_DATA.filter(r =>
+  // Fetch real-time rentals from backend database
+  const { data: liveRentalsData } = trpc.rentals.list.useQuery({ limit: 50 }, {
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: trendingLocationsData, isLoading: trendingLoading } = trpc.search.trendingLocations.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+
+  // Map live database rentals — no mock fallback
+  const rentalsList = useMemo(() => {
+    if (!liveRentalsData || liveRentalsData.length === 0) {
+      return [];
+    }
+    return liveRentalsData.map((r: any) => ({
+      id: Number(r.id),
+      title: r.title || "",
+      pricePerDay: Number(r.price || 0),
+      location: r.location || "Nepal",
+      sellerName: r.seller?.name || "Owner",
+      verified: !!r.seller?.isVerified,
+      rating: Number(r.seller?.rating || 4.5),
+      images: r.images && r.images.length > 0 ? r.images : [],
+      category: r.category || "other",
+      subcategory: r.subcategory || "",
+      createdAt: r.createdAt || new Date().toISOString(),
+      views: Number(r.views || 0),
+      description: r.description || "",
+    }));
+  }, [liveRentalsData]);
+
+  let filteredRentals = rentalsList.filter(r =>
     (selectedCategory === "all" || r.category === selectedCategory) &&
     (selectedSubcategory === "all" || r.subcategory === selectedSubcategory)
   );
@@ -280,8 +190,8 @@ export function RentalResponsive() {
     e.currentTarget.src = `https://picsum.photos/seed/${fallbackId || Date.now()}/400/400`;
   };
 
-  const totalRentals = RENTALS_DATA.length;
-  const totalViews = RENTALS_DATA.reduce((sum, r) => sum + (r.views || 0), 0);
+  const totalRentals = rentalsList.length;
+  const totalViews = rentalsList.reduce((sum, r) => sum + (r.views || 0), 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -618,6 +528,12 @@ export function RentalResponsive() {
                     </div>
                   )
                 ))
+              ) : rentalsList.length === 0 ? (
+                <div className="text-center py-12 col-span-full">
+                  <div className="text-5xl mb-4">🏠</div>
+                  <h3 className="text-lg font-bold text-gray-700 mb-2">No rentals listed yet</h3>
+                  <p className="text-gray-400 text-sm mb-6">Be the first to list a rental property or item!</p>
+                </div>
               ) : (
                 <div className="text-center py-12 col-span-full">
                   <div className="text-5xl mb-4">🏠</div>
@@ -639,38 +555,35 @@ export function RentalResponsive() {
             {/* Featured Rentals Carousel — real sponsored data */}
             <FeaturedAdCarousel title="Featured Rentals" accentColor="purple" />
 
-            {/* Trending Locations */}
-            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-              <h3 className="font-bold text-gray-900 mb-3 text-sm">Trending Locations</h3>
-              <div className="space-y-4">
-                {[
-                  { name: "Kathmandu, Bagmati", count: 124, rating: 4.8 },
-                  { name: "Lalitpur, Bagmati", count: 89, rating: 4.6 },
-                  { name: "Pokhara, Gandaki", count: 67, rating: 4.9 },
-                  { name: "Bhaktapur, Bagmati", count: 54, rating: 4.7 },
-                ].map((loc, i) => (
-                  <div
-                    key={i}
-                    className="flex gap-3 items-center p-2 rounded hover:bg-gray-50 cursor-pointer transition-all border-b border-gray-100 last:border-0 pb-3 last:pb-0"
-                    onClick={() => setSearchTerm(loc.name.split(',')[0])}
-                  >
-                    <div className="w-14 h-14 bg-gray-100 rounded-md overflow-hidden shrink-0">
-                      <div className="w-full h-full bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center">
-                        <MapPin className="w-5 h-5 text-purple-500" />
+            {/* Trending Locations - Shows real locations from database */}
+            {!trendingLoading && trendingLocationsData && trendingLocationsData.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-3 text-sm">Trending Locations</h3>
+                <div className="space-y-4">
+                  {trendingLocationsData.map((loc, i) => (
+                    <div
+                      key={i}
+                      className="flex gap-3 items-center p-2 rounded hover:bg-gray-50 cursor-pointer transition-all border-b border-gray-100 last:border-0 pb-3 last:pb-0"
+                      onClick={() => setSearchTerm(loc.name)}
+                    >
+                      <div className="w-14 h-14 bg-gray-100 rounded-md overflow-hidden shrink-0">
+                        <div className="w-full h-full bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center">
+                          <MapPin className="w-5 h-5 text-purple-500" />
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-gray-800 truncate mb-1">{loc.name}</p>
+                        <p className="text-xs text-purple-600 font-bold">{loc.count} listings</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-[10px] text-gray-500">{loc.rating.toFixed(1)} ★</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-gray-800 truncate mb-1">{loc.name}</p>
-                      <p className="text-xs text-purple-600 font-bold">{loc.count} properties</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-[10px] text-gray-500">{loc.rating} ★</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Why Rent With Us */}
             <div className="bg-white border border-gray-200 rounded-xl p-4">
