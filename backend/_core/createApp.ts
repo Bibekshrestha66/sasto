@@ -98,14 +98,18 @@ export async function createApp(options: CreateAppOptions): Promise<CreateAppRes
   app.use("/api/inngest", inngestHandler);
   app.use("/api", restRouter);
 
-  try {
-    const { getPayload } = await import("payload");
-    const payloadConfigModule = await import("../../payload.config");
-    const payloadInstance = await getPayload({ config: payloadConfigModule.default });
-    (app as any).locals.payload = payloadInstance;
-    console.info("[CMS] Payload CMS v3 Local API initialized successfully");
-  } catch (err) {
-    console.warn("[CMS] Payload CMS failed to initialize (non-fatal):", (err as Error).message);
+  if (mode !== "serverless") {
+    try {
+      const { getPayload } = await import("payload");
+      const payloadConfigModule = await import("../../payload.config");
+      const payloadInstance = await getPayload({ config: payloadConfigModule.default });
+      (app as any).locals.payload = payloadInstance;
+      console.info("[CMS] Payload CMS v3 Local API initialized successfully");
+    } catch (err) {
+      console.warn("[CMS] Payload CMS failed to initialize (non-fatal):", (err as Error).message);
+    }
+  } else {
+    console.log("[CMS] Payload CMS skipped in serverless mode.");
   }
 
   app.use(express.json({ limit: "50mb" }));
