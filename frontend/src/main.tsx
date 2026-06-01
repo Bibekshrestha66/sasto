@@ -41,7 +41,13 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-const backendBase = (import.meta.env?.VITE_APP_URL as string) || "";
+let backendBase = (import.meta.env?.VITE_APP_URL as string) || "";
+if (typeof window !== "undefined") {
+  if (window.location.hostname !== "localhost" && backendBase.includes("localhost")) {
+    console.warn("VITE_APP_URL is pointing to localhost in production. Falling back to relative API paths.");
+    backendBase = "";
+  }
+}
 const apiUrl = backendBase ? `${backendBase.replace(/\/$/, "")}/api/trpc` : "/api/trpc";
 
 const trpcClient = trpc.createClient({
