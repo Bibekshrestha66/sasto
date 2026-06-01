@@ -34,7 +34,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
-      <SignIn routing="path" path="/login" signUpUrl="/register" />
+      <SignIn routing="path" path="/login" signUpUrl="/register" fallbackRedirectUrl="/" />
     </div>
   );
 }
