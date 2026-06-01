@@ -37,5 +37,4 @@ export default function Register() {
       <SignUp routing="path" path="/register" signInUrl="/login" fallbackRedirectUrl="/" />
     </div>
   );
-  );
 }
