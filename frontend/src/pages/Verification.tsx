@@ -65,7 +65,7 @@ export default function Verification() {
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, { name: string; preview: string }>>({});
 
   const { data: submissions, refetch: refetchSubmissions, isLoading } =
-    trpc.verification.getStatus.useQuery({});
+    trpc.verification.getStatus.useQuery(undefined);
 
   const submitMutation = trpc.verification.submit.useMutation();
 

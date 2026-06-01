@@ -62,22 +62,22 @@ export default function SellerDashboard() {
   }
 
   // Fetch dashboard data
-  const { data: metrics, isLoading: metricsLoading } = trpc.sellerAnalytics.overview.useQuery({});
+  const { data: metrics, isLoading: metricsLoading } = trpc.sellerAnalytics.overview.useQuery(undefined);
   const { data: listings, isLoading: listingsLoading } = trpc.seller.getListings.useQuery({ page: 1, limit: 10 });
   const { data: analytics } = trpc.sellerAnalytics.salesTrends.useQuery({ days: 30 });
   const { data: reviews } = trpc.sellerAnalytics.reviews.useQuery({ page: 1, limit: 5 });
   const { data: topListings } = trpc.sellerAnalytics.topListings.useQuery({ limit: 5 });
-  const { data: revenueByCategory } = trpc.sellerAnalytics.revenueByCategory.useQuery({});
-  const { data: auctionStats } = trpc.sellerAnalytics.auctionStats.useQuery({});
-  const { data: orders = [], isLoading: ordersLoading } = trpc.transactions.listSellerOrders.useQuery({});
+  const { data: revenueByCategory } = trpc.sellerAnalytics.revenueByCategory.useQuery(undefined);
+  const { data: auctionStats } = trpc.sellerAnalytics.auctionStats.useQuery(undefined);
+  const { data: orders = [], isLoading: ordersLoading } = trpc.transactions.listSellerOrders.useQuery(undefined);
   const { data: returnsData = [], refetch: refetchReturns } = (trpc as any).returns.getSellerReturns.useQuery(undefined, { enabled: isAuthenticated });
 
   const utils = trpc.useUtils();
 
   const deleteListingMutation = trpc.seller.deleteListing.useMutation();
 
-  const { data: pricingTiers = [], isLoading: pricingLoading } = trpc.ads.getSponsoredPricing.useQuery({});
-  const { data: gateways = [], isLoading: gatewaysLoading } = trpc.ads.getActiveGateways.useQuery({});
+  const { data: pricingTiers = [], isLoading: pricingLoading } = trpc.ads.getSponsoredPricing.useQuery(undefined);
+  const { data: gateways = [], isLoading: gatewaysLoading } = trpc.ads.getActiveGateways.useQuery(undefined);
 
   const promoteListingMutation = trpc.ads.promoteListing.useMutation();
 
