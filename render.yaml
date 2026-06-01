@@ -3,8 +3,8 @@ services:
     name: sasto-marketplace
     env: node
     # Use pnpm since it's defined as the package manager in package.json
-    buildCommand: pnpm install && pnpm run build && pnpm run db:push
-    startCommand: pnpm run start
+    buildCommand: rm -f package-lock.json pnpm-lock.yaml && npm install --legacy-peer-deps && npm run build
+    startCommand: npm run start
     plan: starter # You can upgrade this based on your needs
     envVars:
       - key: NODE_ENV
