@@ -72,17 +72,20 @@ export default function AuctionDetail() {
     };
   }, [auctionId]);
 
-  const placeBidMutation = trpc.auctions.placeBid.useMutation({
-    onSuccess: () => {
+  const placeBidMutation = trpc.auctions.placeBid.useMutation();
+  useEffect(() => {
+    if (placeBidMutation.isSuccess) {
       toast.success("Your bid has been placed successfully!");
       setBidAmount("");
       utils.auctions.getById.invalidate(auctionId);
       utils.auctions.getBids.invalidate(auctionId);
-    },
-    onError: (err) => {
-      toast.error(err.message);
     }
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placeBidMutation.isSuccess]);
+  useEffect(() => {
+    if (placeBidMutation.isError) { toast.error((placeBidMutation.error as any)?.message); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placeBidMutation.isError]);
 
   const handlePlaceBid = () => {
     if (!user) {

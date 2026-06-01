@@ -4,8 +4,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
 import { getR2Client, getR2PublicBaseUrl, R2_BUCKET_NAME, R2_ACCOUNT_ID } from "./r2";
 
-const r2Client = getR2Client();
-
+// r2Client is initialized lazily per-request so TypeScript narrowing works correctly
 const uploadRouter = Router();
 
 // Configure Multer for memory storage with a 50MB max limit to accommodate videos
@@ -17,7 +16,8 @@ const upload = multer({
 
 uploadRouter.post("/image", upload.single("image"), async (req, res) => {
   try {
-    if (!r2Client) {
+    const r2 = getR2Client();
+    if (!r2) {
       return res.status(500).json({ error: "R2 is not configured" });
     }
     if (!req.file) {
@@ -37,7 +37,7 @@ uploadRouter.post("/image", upload.single("image"), async (req, res) => {
     const key = `uploads/${Date.now()}-${randomHash}.${fileExtension}`;
 
     // Upload object to Cloudflare R2
-    await r2Client.send(
+    await r2.send(
       new PutObjectCommand({
         Bucket: R2_BUCKET_NAME,
         Key: key,
@@ -47,9 +47,7 @@ uploadRouter.post("/image", upload.single("image"), async (req, res) => {
     );
 
     // Compute public URL
-    // If publicCustomDomain is configured, use it, otherwise fall back to a public r2 endpoint
     const baseUrl = getR2PublicBaseUrl() || `https://${R2_BUCKET_NAME}.${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
-
     const publicUrl = `${baseUrl}/${key}`;
 
     res.json({ url: publicUrl });

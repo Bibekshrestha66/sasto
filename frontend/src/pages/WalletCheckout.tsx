@@ -22,14 +22,7 @@ export default function WalletCheckout() {
   const [step, setStep] = useState<"confirm" | "processing" | "success" | "failed">("confirm");
   const [pin, setPin] = useState("");
 
-  const webhookMutation = trpc.ads.walletWebhook.useMutation({
-    onSuccess: () => {
-      setStep("success");
-    },
-    onError: () => {
-      setStep("failed");
-    },
-  });
+  const webhookMutation = trpc.ads.walletWebhook.useMutation();
 
   const handleConfirm = () => {
     if (pin.length < 4) {
@@ -40,7 +33,14 @@ export default function WalletCheckout() {
     // Simulate a brief processing delay, then call the webhook
     setTimeout(() => {
       if (transactionId) {
-        webhookMutation.mutate({ transactionId, status: "SUCCESS" });
+        webhookMutation.mutate({ transactionId, status: "SUCCESS" }, {
+          onSuccess: () => {
+            setStep("success");
+          },
+          onError: () => {
+            setStep("failed");
+          },
+        });
       } else {
         setStep("failed");
       }

@@ -62,66 +62,28 @@ export default function SellerDashboard() {
   }
 
   // Fetch dashboard data
-  const { data: metrics, isLoading: metricsLoading } = trpc.sellerAnalytics.overview.useQuery();
+  const { data: metrics, isLoading: metricsLoading } = trpc.sellerAnalytics.overview.useQuery({});
   const { data: listings, isLoading: listingsLoading } = trpc.seller.getListings.useQuery({ page: 1, limit: 10 });
   const { data: analytics } = trpc.sellerAnalytics.salesTrends.useQuery({ days: 30 });
   const { data: reviews } = trpc.sellerAnalytics.reviews.useQuery({ page: 1, limit: 5 });
   const { data: topListings } = trpc.sellerAnalytics.topListings.useQuery({ limit: 5 });
-  const { data: revenueByCategory } = trpc.sellerAnalytics.revenueByCategory.useQuery();
-  const { data: auctionStats } = trpc.sellerAnalytics.auctionStats.useQuery();
-  const { data: orders = [], isLoading: ordersLoading } = trpc.transactions.listSellerOrders.useQuery();
+  const { data: revenueByCategory } = trpc.sellerAnalytics.revenueByCategory.useQuery({});
+  const { data: auctionStats } = trpc.sellerAnalytics.auctionStats.useQuery({});
+  const { data: orders = [], isLoading: ordersLoading } = trpc.transactions.listSellerOrders.useQuery({});
   const { data: returnsData = [], refetch: refetchReturns } = (trpc as any).returns.getSellerReturns.useQuery(undefined, { enabled: isAuthenticated });
 
   const utils = trpc.useUtils();
 
-  const deleteListingMutation = trpc.seller.deleteListing.useMutation({
-    onSuccess: () => {
-      toast.success("Listing deleted!");
-      utils.seller.getListings.invalidate();
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to delete listing");
-    },
-  });
+  const deleteListingMutation = trpc.seller.deleteListing.useMutation();
 
-  const { data: pricingTiers = [], isLoading: pricingLoading } = trpc.ads.getSponsoredPricing.useQuery();
-  const { data: gateways = [], isLoading: gatewaysLoading } = trpc.ads.getActiveGateways.useQuery();
+  const { data: pricingTiers = [], isLoading: pricingLoading } = trpc.ads.getSponsoredPricing.useQuery({});
+  const { data: gateways = [], isLoading: gatewaysLoading } = trpc.ads.getActiveGateways.useQuery({});
 
-  const promoteListingMutation = trpc.ads.promoteListing.useMutation({
-    onSuccess: (data) => {
-      toast.success(`Promotion request submitted! Price: NPR ${data.price}. Await admin approval.`);
-      setPromoteModalOpen(false);
-      utils.seller.getListings.invalidate();
-      
-      if (data.paymentUrl) {
-        setLocation(data.paymentUrl);
-      }
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to submit promotion request");
-    },
-  });
+  const promoteListingMutation = trpc.ads.promoteListing.useMutation();
 
-  const updateStatusMutation = trpc.transactions.updateStatus.useMutation({
-    onSuccess: () => {
-      toast.success("Order status updated!");
-      utils.transactions.listSellerOrders.invalidate();
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to update order status");
-    }
-  });
+  const updateStatusMutation = trpc.transactions.updateStatus.useMutation();
 
-  const updateReturnStatusMutation = (trpc as any).returns.updateStatus.useMutation({
-    onSuccess: () => {
-      toast.success("Return status updated!");
-      refetchReturns();
-      utils.transactions.listSellerOrders.invalidate();
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Failed to update return status");
-    }
-  });
+  const updateReturnStatusMutation = (trpc as any).returns.updateStatus.useMutation();
 
   const COLORS = ["#00AA44", "#FFA500", "#FF6B6B", "#4ECDC4"];
 
@@ -386,7 +348,15 @@ export default function SellerDashboard() {
                           <AlertDialogFooter className="mt-6">
                             <AlertDialogCancel className="h-12 rounded-xl font-bold border-gray-200 text-gray-600 hover:bg-gray-50 px-6">Cancel</AlertDialogCancel>
                             <AlertDialogAction 
-                              onClick={() => deleteListingMutation.mutate({ listingId: item.id })}
+                              onClick={() => deleteListingMutation.mutate({ listingId: item.id }, {
+                                onSuccess: () => {
+                                  toast.success("Listing deleted!");
+                                  utils.seller.getListings.invalidate();
+                                },
+                                onError: (error: any) => {
+                                  toast.error(error.message || "Failed to delete listing");
+                                },
+                              })}
                               className="h-12 rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white px-6"
                             >
                               Yes, Delete
@@ -518,6 +488,18 @@ export default function SellerDashboard() {
                       listingId: promoteListingItem.id, 
                       tier: selectedTier,
                       paymentMethod: selectedPaymentMethod || undefined
+                    }, {
+                      onSuccess: (data: any) => {
+                        toast.success(`Promotion request submitted! Price: NPR ${data.price}. Await admin approval.`);
+                        setPromoteModalOpen(false);
+                        utils.seller.getListings.invalidate();
+                        if (data.paymentUrl) {
+                          setLocation(data.paymentUrl);
+                        }
+                      },
+                      onError: (error: any) => {
+                        toast.error(error.message || "Failed to submit promotion request");
+                      },
                     });
                   }}
                   disabled={promoteListingMutation.isPending || pricingLoading}
@@ -689,7 +671,15 @@ export default function SellerDashboard() {
                               <Button
                                 size="sm"
                                 className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl"
-                                onClick={() => updateStatusMutation.mutate({ orderId: order.orderId, status: "processing" })}
+                                onClick={() => updateStatusMutation.mutate({ orderId: order.orderId, status: "processing" }, {
+                                  onSuccess: () => {
+                                    toast.success("Order status updated!");
+                                    utils.transactions.listSellerOrders.invalidate();
+                                  },
+                                  onError: (error: any) => {
+                                    toast.error(error.message || "Failed to update order status");
+                                  },
+                                })}
                                 disabled={updateStatusMutation.isPending}
                               >
                                 Accept & Process
@@ -699,7 +689,15 @@ export default function SellerDashboard() {
                               <Button
                                 size="sm"
                                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl"
-                                onClick={() => updateStatusMutation.mutate({ orderId: order.orderId, status: "shipped" })}
+                                onClick={() => updateStatusMutation.mutate({ orderId: order.orderId, status: "shipped" }, {
+                                  onSuccess: () => {
+                                    toast.success("Order status updated!");
+                                    utils.transactions.listSellerOrders.invalidate();
+                                  },
+                                  onError: (error: any) => {
+                                    toast.error(error.message || "Failed to update order status");
+                                  },
+                                })}
                                 disabled={updateStatusMutation.isPending}
                               >
                                 <Truck className="w-4 h-4 mr-1.5" /> Mark Shipped
@@ -709,7 +707,15 @@ export default function SellerDashboard() {
                               <Button
                                 size="sm"
                                 className="bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl"
-                                onClick={() => updateStatusMutation.mutate({ orderId: order.orderId, status: "delivered" })}
+                                onClick={() => updateStatusMutation.mutate({ orderId: order.orderId, status: "delivered" }, {
+                                  onSuccess: () => {
+                                    toast.success("Order status updated!");
+                                    utils.transactions.listSellerOrders.invalidate();
+                                  },
+                                  onError: (error: any) => {
+                                    toast.error(error.message || "Failed to update order status");
+                                  },
+                                })}
                                 disabled={updateStatusMutation.isPending}
                               >
                                 <CheckCircle2 className="w-4 h-4 mr-1.5" /> Mark Delivered

@@ -139,31 +139,11 @@ export default function Profile() {
   }, [myListings]);
 
   // Mutations
-  const updateProfile = (trpc as any).auth.updateProfile.useMutation({
-    onSuccess: () => {
-      toast.success("Profile updated!");
-      refresh();
-      utils.auth.me.invalidate();
-    },
-    onError: (err: any) => toast.error(err.message || "Update failed"),
-  });
+  const updateProfile = (trpc as any).auth.updateProfile.useMutation();
 
-  const deleteListing = (trpc as any).seller.deleteListing.useMutation({
-    onSuccess: () => {
-      toast.success("Listing deleted");
-      refetchListings();
-    },
-    onError: (err: any) => toast.error(err.message || "Delete failed"),
-  });
+  const deleteListing = (trpc as any).seller.deleteListing.useMutation();
 
-  const updateListingPrice = (trpc as any).seller.updateListingPrice.useMutation({
-    onSuccess: () => {
-      toast.success("Price/Deal updated successfully!");
-      refetchListings();
-      setSelectedDealListing(null);
-    },
-    onError: (err: any) => toast.error(err.message || "Failed to update price/deal"),
-  });
+  const updateListingPrice = (trpc as any).seller.updateListingPrice.useMutation();
 
   // Handlers
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -172,12 +152,25 @@ export default function Profile() {
   };
 
   const handleSave = () => {
-    updateProfile.mutate(formData);
+    updateProfile.mutate(formData, {
+      onSuccess: () => {
+        toast.success("Profile updated!");
+        refresh();
+        utils.auth.me.invalidate();
+      },
+      onError: (err: any) => toast.error(err.message || "Update failed"),
+    });
   };
 
   const handleDeleteListing = (id: number) => {
     if (confirm("Are you sure you want to delete this listing? This action cannot be undone.")) {
-      deleteListing.mutate({ listingId: id });
+      deleteListing.mutate({ listingId: id }, {
+        onSuccess: () => {
+          toast.success("Listing deleted");
+          refetchListings();
+        },
+        onError: (err: any) => toast.error(err.message || "Delete failed"),
+      });
     }
   };
 
@@ -185,7 +178,14 @@ export default function Profile() {
     setIsUploadingAvatar(true);
     try {
       const fileId = await uploadFile(file);
-      updateProfile.mutate({ avatar: fileId });
+      updateProfile.mutate({ avatar: fileId }, {
+        onSuccess: () => {
+          toast.success("Profile updated!");
+          refresh();
+          utils.auth.me.invalidate();
+        },
+        onError: (err: any) => toast.error(err.message || "Update failed"),
+      });
     } catch (error) {
       toast.error("Avatar upload failed");
     } finally {
@@ -197,7 +197,14 @@ export default function Profile() {
     setIsUploadingBanner(true);
     try {
       const fileId = await uploadFile(file);
-      updateProfile.mutate({ bannerImage: fileId });
+      updateProfile.mutate({ bannerImage: fileId }, {
+        onSuccess: () => {
+          toast.success("Profile updated!");
+          refresh();
+          utils.auth.me.invalidate();
+        },
+        onError: (err: any) => toast.error(err.message || "Update failed"),
+      });
     } catch (error) {
       toast.error("Banner upload failed");
     } finally {
@@ -714,6 +721,13 @@ export default function Profile() {
                       listingId: selectedDealListing.id,
                       price: priceVal,
                       originalPrice: !isNaN(origVal) && origVal > priceVal ? origVal : null,
+                    }, {
+                      onSuccess: () => {
+                        toast.success("Price/Deal updated successfully!");
+                        refetchListings();
+                        setSelectedDealListing(null);
+                      },
+                      onError: (err: any) => toast.error(err.message || "Failed to update price/deal"),
                     });
                   }}
                   disabled={updateListingPrice.isPending}
@@ -730,6 +744,13 @@ export default function Profile() {
                         listingId: selectedDealListing.id,
                         price: origVal,
                         originalPrice: null,
+                      }, {
+                        onSuccess: () => {
+                          toast.success("Price/Deal updated successfully!");
+                          refetchListings();
+                          setSelectedDealListing(null);
+                        },
+                        onError: (err: any) => toast.error(err.message || "Failed to update price/deal"),
                       });
                     }}
                     variant="outline"

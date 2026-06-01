@@ -20,5 +20,5 @@ async function getApp(): Promise<Express> {
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   const application = await getApp();
-  application(req as any, res as any);
+  (application as unknown as (req: IncomingMessage, res: ServerResponse) => void)(req, res);
 }

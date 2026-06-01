@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -35,16 +35,15 @@ export default function BuyerDashboard() {
   const [returnReason, setReturnReason] = useState("damaged");
   const [returnDescription, setReturnDescription] = useState("");
 
-  const requestReturnMutation = (trpc as any).returns.requestReturn.useMutation({
-    onSuccess: () => {
-      toast.success("Return requested successfully");
-      setReturnModalOpen(false);
-      refetchReturns();
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Failed to request return");
-    }
-  });
+  const requestReturnMutation = (trpc as any).returns.requestReturn.useMutation();
+  useEffect(() => {
+    if (requestReturnMutation.isSuccess) { toast.success("Return requested successfully"); setReturnModalOpen(false); refetchReturns(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestReturnMutation.isSuccess]);
+  useEffect(() => {
+    if (requestReturnMutation.isError) { toast.error((requestReturnMutation.error as any)?.message || "Failed to request return"); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestReturnMutation.isError]);
 
   const handleRequestReturn = (txId: number) => {
     setReturnTxId(txId);

@@ -63,13 +63,15 @@ export default function HomePage() {
   });
 
   const utils = trpc.useContext();
-  const addToCartMutation = trpc.cart.addItem.useMutation({
-    onSuccess: () => {
-      toast.success("Added to cart!");
-      utils.cart.get.invalidate();
-    },
-    onError: (e) => toast.error(e.message || "Failed to add to cart")
-  });
+  const addToCartMutation = trpc.cart.addItem.useMutation();
+  useEffect(() => {
+    if (addToCartMutation.isSuccess) { toast.success("Added to cart!"); utils.cart.get.invalidate(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addToCartMutation.isSuccess]);
+  useEffect(() => {
+    if (addToCartMutation.isError) { toast.error((addToCartMutation.error as any)?.message || "Failed to add to cart"); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addToCartMutation.isError]);
 
   const handleBuyNow = (e: React.MouseEvent, listingId: number) => {
     e.stopPropagation();

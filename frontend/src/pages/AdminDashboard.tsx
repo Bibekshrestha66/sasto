@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,97 +62,92 @@ export default function AdminDashboard() {
   const featuredListingsQuery = trpc.ads.adminGetFeaturedListings.useQuery(undefined, { enabled: activeTab === "sponsored" });
 
   // Mutations
-  const verifyUserMutation = trpc.admin.verifyUser.useMutation({
-    onSuccess: () => {
-      toast.success("User verified successfully");
-      usersQuery.refetch();
-      setShowActionDialog(false);
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to verify user");
-      console.error("Verify error:", error);
-    },
-  });
+  const verifyUserMutation = trpc.admin.verifyUser.useMutation();
+  useEffect(() => {
+    if (verifyUserMutation.isSuccess) { toast.success("User verified successfully"); usersQuery.refetch(); setShowActionDialog(false); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verifyUserMutation.isSuccess]);
+  useEffect(() => {
+    if (verifyUserMutation.isError) { toast.error((verifyUserMutation.error as any)?.message || "Failed to verify user"); console.error("Verify error:", verifyUserMutation.error); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verifyUserMutation.isError]);
 
-  const suspendUserMutation = trpc.admin.suspendUser.useMutation({
-    onSuccess: () => {
-      toast.success("User suspended successfully");
-      usersQuery.refetch();
-      setShowActionDialog(false);
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to suspend user");
-      console.error("Suspend error:", error);
-    },
-  });
+  const suspendUserMutation = trpc.admin.suspendUser.useMutation();
+  useEffect(() => {
+    if (suspendUserMutation.isSuccess) { toast.success("User suspended successfully"); usersQuery.refetch(); setShowActionDialog(false); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suspendUserMutation.isSuccess]);
+  useEffect(() => {
+    if (suspendUserMutation.isError) { toast.error((suspendUserMutation.error as any)?.message || "Failed to suspend user"); console.error("Suspend error:", suspendUserMutation.error); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suspendUserMutation.isError]);
 
-  const banUserMutation = trpc.admin.banUser.useMutation({
-    onSuccess: () => {
-      toast.success("User banned successfully");
-      usersQuery.refetch();
-      setShowActionDialog(false);
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to ban user");
-      console.error("Ban error:", error);
-    },
-  });
+  const banUserMutation = trpc.admin.banUser.useMutation();
+  useEffect(() => {
+    if (banUserMutation.isSuccess) { toast.success("User banned successfully"); usersQuery.refetch(); setShowActionDialog(false); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [banUserMutation.isSuccess]);
+  useEffect(() => {
+    if (banUserMutation.isError) { toast.error((banUserMutation.error as any)?.message || "Failed to ban user"); console.error("Ban error:", banUserMutation.error); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [banUserMutation.isError]);
 
-  const approveListingMutation = trpc.admin.approveListing.useMutation({
-    onSuccess: () => {
-      toast.success("Listing approved");
-      listingsQuery.refetch();
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to approve listing");
-      console.error("Approve error:", error);
-    },
-  });
+  const approveListingMutation = trpc.admin.approveListing.useMutation();
+  useEffect(() => {
+    if (approveListingMutation.isSuccess) { toast.success("Listing approved"); listingsQuery.refetch(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [approveListingMutation.isSuccess]);
+  useEffect(() => {
+    if (approveListingMutation.isError) { toast.error((approveListingMutation.error as any)?.message || "Failed to approve listing"); console.error("Approve error:", approveListingMutation.error); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [approveListingMutation.isError]);
 
-  const rejectListingMutation = trpc.admin.rejectListing.useMutation({
-    onSuccess: () => {
-      toast.success("Listing rejected");
-      listingsQuery.refetch();
-      setShowActionDialog(false);
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to reject listing");
-      console.error("Reject error:", error);
-    },
-  });
+  const rejectListingMutation = trpc.admin.rejectListing.useMutation();
+  useEffect(() => {
+    if (rejectListingMutation.isSuccess) { toast.success("Listing rejected"); listingsQuery.refetch(); setShowActionDialog(false); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rejectListingMutation.isSuccess]);
+  useEffect(() => {
+    if (rejectListingMutation.isError) { toast.error((rejectListingMutation.error as any)?.message || "Failed to reject listing"); console.error("Reject error:", rejectListingMutation.error); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rejectListingMutation.isError]);
 
-  const updateDisputeMutation = trpc.admin.updateDisputeStatus.useMutation({
-    onSuccess: () => {
-      toast.success("Dispute updated");
-      disputesQuery.refetch();
-      setShowActionDialog(false);
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to update dispute");
-      console.error("Dispute update error:", error);
-    },
-  });
+  const updateDisputeMutation = trpc.admin.updateDisputeStatus.useMutation();
+  useEffect(() => {
+    if (updateDisputeMutation.isSuccess) { toast.success("Dispute updated"); disputesQuery.refetch(); setShowActionDialog(false); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateDisputeMutation.isSuccess]);
+  useEffect(() => {
+    if (updateDisputeMutation.isError) { toast.error((updateDisputeMutation.error as any)?.message || "Failed to update dispute"); console.error("Dispute update error:", updateDisputeMutation.error); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateDisputeMutation.isError]);
 
   // Sponsored ads mutations
-  const reviewPromotionMutation = trpc.ads.adminReviewPromotion.useMutation({
-    onSuccess: (data) => {
-      toast.success(data.message);
+  const reviewPromotionMutation = trpc.ads.adminReviewPromotion.useMutation();
+  useEffect(() => {
+    if (reviewPromotionMutation.isSuccess && reviewPromotionMutation.data) {
+      toast.success((reviewPromotionMutation.data as any).message);
       promotionRequestsQuery.refetch();
       featuredListingsQuery.refetch();
       setRejectModalOpen(false);
       setRejectNotes("");
-    },
-    onError: (err: any) => toast.error(err.message || "Action failed"),
-  });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewPromotionMutation.isSuccess]);
+  useEffect(() => {
+    if (reviewPromotionMutation.isError) toast.error((reviewPromotionMutation.error as any)?.message || "Action failed");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewPromotionMutation.isError]);
 
-  const setPricingMutation = trpc.ads.adminSetSponsoredPricing.useMutation({
-    onSuccess: () => {
-      toast.success("Pricing updated!");
-      pricingQuery.refetch();
-      setEditingPricing({});
-    },
-    onError: (err: any) => toast.error(err.message || "Failed to update pricing"),
-  });
+  const setPricingMutation = trpc.ads.adminSetSponsoredPricing.useMutation();
+  useEffect(() => {
+    if (setPricingMutation.isSuccess) { toast.success("Pricing updated!"); pricingQuery.refetch(); setEditingPricing({}); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setPricingMutation.isSuccess]);
+  useEffect(() => {
+    if (setPricingMutation.isError) toast.error((setPricingMutation.error as any)?.message || "Failed to update pricing");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setPricingMutation.isError]);
 
   const handleAction = async () => {
     if (!actionReason.trim() && actionType !== "verify") {

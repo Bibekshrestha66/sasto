@@ -64,17 +64,15 @@ export default function EditListing() {
     { enabled: !!formData.category && !isNaN(parseInt(formData.category)) }
   );
 
-  const updateListingMutation = trpc.listings.update.useMutation({
-    onSuccess: () => {
-      toast.success("Listing updated successfully!");
-      utils.seller.getListings.invalidate();
-      navigate("/seller/dashboard");
-    },
-    onError: (err) => {
-      toast.error("Failed to update listing: " + err.message);
-      setIsSubmitting(false);
-    },
-  });
+  const updateListingMutation = trpc.listings.update.useMutation();
+  useEffect(() => {
+    if (updateListingMutation.isSuccess) { toast.success("Listing updated successfully!"); utils.seller.getListings.invalidate(); navigate("/seller/dashboard"); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateListingMutation.isSuccess]);
+  useEffect(() => {
+    if (updateListingMutation.isError) { toast.error("Failed to update listing: " + (updateListingMutation.error as any)?.message); setIsSubmitting(false); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateListingMutation.isError]);
 
   // Pre-fill form when existing listing loads
   useEffect(() => {

@@ -65,19 +65,9 @@ export default function Verification() {
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, { name: string; preview: string }>>({});
 
   const { data: submissions, refetch: refetchSubmissions, isLoading } =
-    trpc.verification.getStatus.useQuery();
+    trpc.verification.getStatus.useQuery({});
 
-  const submitMutation = trpc.verification.submit.useMutation({
-    onSuccess: async () => {
-      toast.success("Verification submitted! We'll review within 24-48 hours.");
-      await refetchSubmissions();
-      await refresh();
-      setStep(3);
-    },
-    onError: (err) => {
-      toast.error(err.message || "Submission failed. Please try again.");
-    },
-  });
+  const submitMutation = trpc.verification.submit.useMutation();
 
   const latestSubmission = submissions?.[0];
 
@@ -121,11 +111,31 @@ export default function Verification() {
   };
 
   const handleKYCSubmit = (data: KYCFormData) => {
-    submitMutation.mutate({ type: "kyc", data });
+    submitMutation.mutate({ type: "kyc", data }, {
+      onSuccess: async () => {
+        toast.success("Verification submitted! We'll review within 24-48 hours.");
+        await refetchSubmissions();
+        await refresh();
+        setStep(3);
+      },
+      onError: (err) => {
+        toast.error(err.message || "Submission failed. Please try again.");
+      },
+    });
   };
 
   const handleKYBSubmit = (data: KYBFormData) => {
-    submitMutation.mutate({ type: "kyb", data });
+    submitMutation.mutate({ type: "kyb", data }, {
+      onSuccess: async () => {
+        toast.success("Verification submitted! We'll review within 24-48 hours.");
+        await refetchSubmissions();
+        await refresh();
+        setStep(3);
+      },
+      onError: (err) => {
+        toast.error(err.message || "Submission failed. Please try again.");
+      },
+    });
   };
 
   // ── Loading ──

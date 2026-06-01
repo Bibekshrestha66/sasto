@@ -316,24 +316,29 @@ export function MarketplaceResponsive() {
   });
 
   const utils = trpc.useContext();
-  const addToCartMutation = trpc.cart.addItem.useMutation({
-    onSuccess: () => {
-      showToast("Added to cart!");
-      utils.cart.get.invalidate();
-    },
-    onError: (e) => showToast(e.message || "Failed to add to cart", 'error')
-  });
+  const addToCartMutation = trpc.cart.addItem.useMutation();
 
   const handleBuyNow = (e: React.MouseEvent, listingId: string | number) => {
     e.stopPropagation();
     addToCartMutation.mutate({ listingId: Number(listingId), quantity: 1 }, {
-      onSuccess: () => setLocation("/checkout")
+      onSuccess: () => {
+        showToast("Added to cart!");
+        utils.cart.get.invalidate();
+        setLocation("/checkout");
+      },
+      onError: (e: any) => showToast(e.message || "Failed to add to cart", 'error')
     });
   };
 
   const handleAddToCart = (e: React.MouseEvent, listingId: string | number) => {
     e.stopPropagation();
-    addToCartMutation.mutate({ listingId: Number(listingId), quantity: 1 });
+    addToCartMutation.mutate({ listingId: Number(listingId), quantity: 1 }, {
+      onSuccess: () => {
+        showToast("Added to cart!");
+        utils.cart.get.invalidate();
+      },
+      onError: (e: any) => showToast(e.message || "Failed to add to cart", 'error')
+    });
   };
 
   // ---------- FIX #4 & #5: Trending locations from backend ----------

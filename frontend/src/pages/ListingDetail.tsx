@@ -42,33 +42,55 @@ export default function ListingDetail() {
 
   const { data: favorites } = trpc.favorites.list.useQuery();
 
-  const placeBidMutation = trpc.auctions.placeBid.useMutation({
-    onSuccess: () => { toast.success("Bid placed!"); setBidAmount(""); setShowBidForm(false); },
-    onError: (e) => toast.error(e.message || "Failed to place bid"),
-  });
+  const placeBidMutation = trpc.auctions.placeBid.useMutation();
+  useEffect(() => {
+    if (placeBidMutation.isSuccess) { toast.success("Bid placed!"); setBidAmount(""); setShowBidForm(false); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placeBidMutation.isSuccess]);
+  useEffect(() => {
+    if (placeBidMutation.isError) { toast.error((placeBidMutation.error as any)?.message || "Failed to place bid"); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placeBidMutation.isError]);
 
-  const createBookingMutation = trpc.bookings.create.useMutation({
-    onSuccess: () => { toast.success("Booking created!"); setBookingDates({ startDate: "", endDate: "" }); setShowBookingForm(false); },
-    onError: (e) => toast.error(e.message || "Failed to create booking"),
-  });
+  const createBookingMutation = trpc.bookings.create.useMutation();
+  useEffect(() => {
+    if (createBookingMutation.isSuccess) { toast.success("Booking created!"); setBookingDates({ startDate: "", endDate: "" }); setShowBookingForm(false); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createBookingMutation.isSuccess]);
+  useEffect(() => {
+    if (createBookingMutation.isError) { toast.error((createBookingMutation.error as any)?.message || "Failed to create booking"); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createBookingMutation.isError]);
 
-  const toggleFavoriteMutation = (trpc.favorites as any).toggle?.useMutation({
-    onSuccess: () => { setIsFavorite(!isFavorite); toast.success(isFavorite ? "Removed from favorites" : "Saved!"); },
-    onError: () => toast.error("Failed to update favorites"),
-  }) || { mutateAsync: async () => { } };
+  const toggleFavoriteMutation: any = (trpc.favorites as any).toggle?.useMutation() || { mutateAsync: async () => { }, isSuccess: false, isError: false };
+  useEffect(() => {
+    if (toggleFavoriteMutation.isSuccess) { setIsFavorite(!isFavorite); toast.success(isFavorite ? "Removed from favorites" : "Saved!"); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toggleFavoriteMutation.isSuccess]);
+  useEffect(() => {
+    if (toggleFavoriteMutation.isError) { toast.error("Failed to update favorites"); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toggleFavoriteMutation.isError]);
 
-  const sendMessageMutation = trpc.messages.send.useMutation({
-    onSuccess: () => { toast.success("Message sent!"); setContactMessage(""); setShowContactForm(false); },
-    onError: (e) => toast.error(e.message || "Failed to send message"),
-  });
+  const sendMessageMutation = trpc.messages.send.useMutation();
+  useEffect(() => {
+    if (sendMessageMutation.isSuccess) { toast.success("Message sent!"); setContactMessage(""); setShowContactForm(false); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sendMessageMutation.isSuccess]);
+  useEffect(() => {
+    if (sendMessageMutation.isError) { toast.error((sendMessageMutation.error as any)?.message || "Failed to send message"); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sendMessageMutation.isError]);
 
-  const addToCartMutation = trpc.cart.addItem.useMutation({
-    onSuccess: () => { 
-      toast.success("Added to cart!"); 
-      setLocation("/cart"); 
-    },
-    onError: (e) => toast.error(e.message || "Failed to add to cart"),
-  });
+  const addToCartMutation = trpc.cart.addItem.useMutation();
+  useEffect(() => {
+    if (addToCartMutation.isSuccess) { toast.success("Added to cart!"); setLocation("/cart"); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addToCartMutation.isSuccess]);
+  useEffect(() => {
+    if (addToCartMutation.isError) { toast.error((addToCartMutation.error as any)?.message || "Failed to add to cart"); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addToCartMutation.isError]);
 
   useEffect(() => {
     if (favorites && listing) {

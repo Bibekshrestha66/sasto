@@ -155,43 +155,53 @@ export default function SuperAdminDashboard() {
   const featuredListingsQuery = trpc.ads.adminGetFeaturedListings.useQuery(undefined, { enabled: selectedTab === "sponsored" });
 
   // Sponsored ads mutations
-  const reviewPromotionMutation = trpc.ads.adminReviewPromotion.useMutation({
-    onSuccess: (data) => {
-      toast.success(data.message);
+  const reviewPromotionMutation = trpc.ads.adminReviewPromotion.useMutation();
+  useEffect(() => {
+    if (reviewPromotionMutation.isSuccess && reviewPromotionMutation.data) {
+      toast.success((reviewPromotionMutation.data as any).message);
       promotionRequestsQuery.refetch();
       featuredListingsQuery.refetch();
       setRejectModalOpen(false);
       setRejectNotes("");
-    },
-    onError: (err: any) => toast.error(err.message || "Action failed"),
-  });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewPromotionMutation.isSuccess]);
+  useEffect(() => {
+    if (reviewPromotionMutation.isError) toast.error((reviewPromotionMutation.error as any)?.message || "Action failed");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewPromotionMutation.isError]);
 
-  const setPricingMutation = trpc.ads.adminSetSponsoredPricing.useMutation({
-    onSuccess: () => {
-      toast.success("Pricing updated!");
-      pricingQuery.refetch();
-      setEditingPricing({});
-    },
-    onError: (err: any) => toast.error(err.message || "Failed to update pricing"),
-  });
+  const setPricingMutation = trpc.ads.adminSetSponsoredPricing.useMutation();
+  useEffect(() => {
+    if (setPricingMutation.isSuccess) { toast.success("Pricing updated!"); pricingQuery.refetch(); setEditingPricing({}); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setPricingMutation.isSuccess]);
+  useEffect(() => {
+    if (setPricingMutation.isError) toast.error((setPricingMutation.error as any)?.message || "Failed to update pricing");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setPricingMutation.isError]);
 
-  const removeFeaturedMutation = trpc.ads.adminSetFeatured.useMutation({
-    onSuccess: () => {
-      toast.success("Listing removed from featured ads!");
-      featuredListingsQuery.refetch();
-    },
-    onError: (e: any) => toast.error(e.message || "Failed to remove featured ad"),
-  });
+  const removeFeaturedMutation = trpc.ads.adminSetFeatured.useMutation();
+  useEffect(() => {
+    if (removeFeaturedMutation.isSuccess) { toast.success("Listing removed from featured ads!"); featuredListingsQuery.refetch(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [removeFeaturedMutation.isSuccess]);
+  useEffect(() => {
+    if (removeFeaturedMutation.isError) toast.error((removeFeaturedMutation.error as any)?.message || "Failed to remove featured ad");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [removeFeaturedMutation.isError]);
 
   // Dynamic Company Settings, Reports, Careers, and CSR live queue TRPC Hooks
   const { data: companyConfig, refetch: refetchConfig } = trpc.system.getCompanyConfig.useQuery();
-  const updateConfigMutation = trpc.admin.updateCompanyConfig.useMutation({
-    onSuccess: () => {
-      toast.success("Company settings updated live!");
-      refetchConfig();
-    },
-    onError: (e) => toast.error(e.message),
-  });
+  const updateConfigMutation = trpc.admin.updateCompanyConfig.useMutation();
+  useEffect(() => {
+    if (updateConfigMutation.isSuccess) { toast.success("Company settings updated live!"); refetchConfig(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateConfigMutation.isSuccess]);
+  useEffect(() => {
+    if (updateConfigMutation.isError) toast.error((updateConfigMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateConfigMutation.isError]);
 
   const { data: paymentGateways, refetch: refetchGateways } = trpc.admin.getPaymentGateways.useQuery(undefined, {
     enabled: user?.role === "super_admin"
@@ -215,13 +225,15 @@ export default function SuperAdminDashboard() {
     }
   }, [paymentGateways]);
 
-  const updateGatewayMutation = trpc.admin.updatePaymentGateway.useMutation({
-    onSuccess: () => {
-      toast.success("Payment Gateway updated successfully!");
-      refetchGateways();
-    },
-    onError: (e) => toast.error(e.message),
-  });
+  const updateGatewayMutation = trpc.admin.updatePaymentGateway.useMutation();
+  useEffect(() => {
+    if (updateGatewayMutation.isSuccess) { toast.success("Payment Gateway updated successfully!"); refetchGateways(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateGatewayMutation.isSuccess]);
+  useEffect(() => {
+    if (updateGatewayMutation.isError) toast.error((updateGatewayMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateGatewayMutation.isError]);
 
   // Logistics Partners State and Hooks
   const [newPartnerName, setNewPartnerName] = useState("");
@@ -229,63 +241,68 @@ export default function SuperAdminDashboard() {
   const { data: logisticsPartners, refetch: refetchLogistics } = trpc.admin.getLogisticsPartners.useQuery(undefined, {
     enabled: user?.role === "super_admin"
   });
-  const addLogisticsPartnerMutation = trpc.admin.addLogisticsPartner.useMutation({
-    onSuccess: () => {
-      toast.success("Logistics partner added successfully!");
-      setNewPartnerName("");
-      setNewPartnerDisplayName("");
-      refetchLogistics();
-    },
-    onError: (e) => toast.error(e.message),
-  });
-  const updateLogisticsPartnerMutation = trpc.admin.updateLogisticsPartner.useMutation({
-    onSuccess: () => {
-      toast.success("Logistics partner updated!");
-      refetchLogistics();
-    },
-    onError: (e) => toast.error(e.message),
-  });
-  const deleteLogisticsPartnerMutation = trpc.admin.deleteLogisticsPartner.useMutation({
-    onSuccess: () => {
-      toast.success("Logistics partner deleted!");
-      refetchLogistics();
-    },
-    onError: (e) => toast.error(e.message),
-  });
+  const addLogisticsPartnerMutation = trpc.admin.addLogisticsPartner.useMutation();
+  useEffect(() => {
+    if (addLogisticsPartnerMutation.isSuccess) { toast.success("Logistics partner added successfully!"); setNewPartnerName(""); setNewPartnerDisplayName(""); refetchLogistics(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addLogisticsPartnerMutation.isSuccess]);
+  useEffect(() => {
+    if (addLogisticsPartnerMutation.isError) toast.error((addLogisticsPartnerMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addLogisticsPartnerMutation.isError]);
+  const updateLogisticsPartnerMutation = trpc.admin.updateLogisticsPartner.useMutation();
+  useEffect(() => {
+    if (updateLogisticsPartnerMutation.isSuccess) { toast.success("Logistics partner updated!"); refetchLogistics(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateLogisticsPartnerMutation.isSuccess]);
+  useEffect(() => {
+    if (updateLogisticsPartnerMutation.isError) toast.error((updateLogisticsPartnerMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateLogisticsPartnerMutation.isError]);
+  const deleteLogisticsPartnerMutation = trpc.admin.deleteLogisticsPartner.useMutation();
+  useEffect(() => {
+    if (deleteLogisticsPartnerMutation.isSuccess) { toast.success("Logistics partner deleted!"); refetchLogistics(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deleteLogisticsPartnerMutation.isSuccess]);
+  useEffect(() => {
+    if (deleteLogisticsPartnerMutation.isError) toast.error((deleteLogisticsPartnerMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deleteLogisticsPartnerMutation.isError]);
 
   const { data: reports, refetch: refetchReports } = trpc.admin.getAllReports.useQuery();
-  const resolveReportMutation = trpc.admin.resolveReport.useMutation({
-    onSuccess: () => {
-      toast.success("Complaint ticket resolved successfully!");
-      refetchReports();
-      setSelectedReportId(null);
-      setResolveNotes("");
-    },
-    onError: (e) => toast.error(e.message),
-  });
+  const resolveReportMutation = trpc.admin.resolveReport.useMutation();
+  useEffect(() => {
+    if (resolveReportMutation.isSuccess) { toast.success("Complaint ticket resolved successfully!"); refetchReports(); setSelectedReportId(null); setResolveNotes(""); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolveReportMutation.isSuccess]);
+  useEffect(() => {
+    if (resolveReportMutation.isError) toast.error((resolveReportMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolveReportMutation.isError]);
 
   const { data: careers, refetch: refetchCareers } = trpc.system.getCareers.useQuery();
-  const createCareerMutation = trpc.admin.createCareerOpening.useMutation({
-    onSuccess: () => {
-      toast.success("New career ad posted live!");
-      refetchCareers();
-      // Reset form
-      setCareerTitle("");
-      setCareerLoc("");
-      setCareerSalary("");
-      setCareerDesc("");
-      setCareerReqs("");
-    },
-    onError: (e) => toast.error(e.message),
-  });
+  const createCareerMutation = trpc.admin.createCareerOpening.useMutation();
+  useEffect(() => {
+    if (createCareerMutation.isSuccess) {
+      toast.success("New career ad posted live!"); refetchCareers();
+      setCareerTitle(""); setCareerLoc(""); setCareerSalary(""); setCareerDesc(""); setCareerReqs("");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createCareerMutation.isSuccess]);
+  useEffect(() => {
+    if (createCareerMutation.isError) toast.error((createCareerMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createCareerMutation.isError]);
 
-  const archiveCareerMutation = trpc.admin.archiveCareerOpening.useMutation({
-    onSuccess: () => {
-      toast.success("Career opening archived!");
-      refetchCareers();
-    },
-    onError: (e) => toast.error(e.message),
-  });
+  const archiveCareerMutation = trpc.admin.archiveCareerOpening.useMutation();
+  useEffect(() => {
+    if (archiveCareerMutation.isSuccess) { toast.success("Career opening archived!"); refetchCareers(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [archiveCareerMutation.isSuccess]);
+  useEffect(() => {
+    if (archiveCareerMutation.isError) toast.error((archiveCareerMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [archiveCareerMutation.isError]);
 
   const { data: supportChats, refetch: refetchChats } = trpc.admin.getSupportConversations.useQuery(undefined, {
     refetchInterval: 5000,
@@ -299,15 +316,15 @@ export default function SuperAdminDashboard() {
     }
   );
 
-  const sendSupportReplyMutation = trpc.admin.sendSupportReply.useMutation({
-    onSuccess: () => {
-      setChatReplyContent("");
-      handleSupportRemoveAttachment();
-      refetchSupportMessages();
-      refetchChats();
-    },
-    onError: (e) => toast.error(e.message),
-  });
+  const sendSupportReplyMutation = trpc.admin.sendSupportReply.useMutation();
+  useEffect(() => {
+    if (sendSupportReplyMutation.isSuccess) { setChatReplyContent(""); handleSupportRemoveAttachment(); refetchSupportMessages(); refetchChats(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sendSupportReplyMutation.isSuccess]);
+  useEffect(() => {
+    if (sendSupportReplyMutation.isError) toast.error((sendSupportReplyMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sendSupportReplyMutation.isError]);
 
   React.useEffect(() => {
     if (companyConfig && !hasLoadedConfig) {
@@ -345,52 +362,92 @@ export default function SuperAdminDashboard() {
   const { data: rbacRoles, isLoading: rolesLoading } = trpc.rbac.getRoles.useQuery();
   const { data: allPermissions, isLoading: permsLoading } = trpc.rbac.getPermissions.useQuery();
   
-  const togglePermMutation = trpc.rbac.togglePermission.useMutation({
-    onSuccess: () => { toast.success("Permission updated!"); utils.rbac.getRoles.invalidate(); },
-    onError: (e) => toast.error(e.message),
-  });
+  const togglePermMutation = trpc.rbac.togglePermission.useMutation();
+  useEffect(() => {
+    if (togglePermMutation.isSuccess) { toast.success("Permission updated!"); utils.rbac.getRoles.invalidate(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [togglePermMutation.isSuccess]);
+  useEffect(() => {
+    if (togglePermMutation.isError) toast.error((togglePermMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [togglePermMutation.isError]);
 
-  const updateRoleMutation = trpc.admin.updateUserRole.useMutation({
-    onSuccess: () => { toast.success("Role updated!"); utils.admin.getAllUsers.invalidate(); },
-    onError: (e) => toast.error(e.message),
-  });
+  const updateRoleMutation = trpc.admin.updateUserRole.useMutation();
+  useEffect(() => {
+    if (updateRoleMutation.isSuccess) { toast.success("Role updated!"); utils.admin.getAllUsers.invalidate(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateRoleMutation.isSuccess]);
+  useEffect(() => {
+    if (updateRoleMutation.isError) toast.error((updateRoleMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateRoleMutation.isError]);
 
-  const banMutation = trpc.admin.banUser.useMutation({
-    onSuccess: () => { toast.success("User banned."); utils.admin.getAllUsers.invalidate(); },
-    onError: (e: any) => toast.error(e.message),
-  });
+  const banMutation = trpc.admin.banUser.useMutation();
+  useEffect(() => {
+    if (banMutation.isSuccess) { toast.success("User banned."); utils.admin.getAllUsers.invalidate(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [banMutation.isSuccess]);
+  useEffect(() => {
+    if (banMutation.isError) toast.error((banMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [banMutation.isError]);
 
-  const unbanMutation = trpc.admin.unbanUser.useMutation({
-    onSuccess: () => { toast.success("User unbanned."); utils.admin.getAllUsers.invalidate(); },
-    onError: (e) => toast.error(e.message),
-  });
+  const unbanMutation = trpc.admin.unbanUser.useMutation();
+  useEffect(() => {
+    if (unbanMutation.isSuccess) { toast.success("User unbanned."); utils.admin.getAllUsers.invalidate(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unbanMutation.isSuccess]);
+  useEffect(() => {
+    if (unbanMutation.isError) toast.error((unbanMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unbanMutation.isError]);
 
-  const approveListingMutation = trpc.admin.approveListing.useMutation({
-    onSuccess: () => { toast.success("Listing approved!"); utils.admin.getFlaggedListings.invalidate(); },
-    onError: (e) => toast.error(e.message),
-  });
+  const approveListingMutation = trpc.admin.approveListing.useMutation();
+  useEffect(() => {
+    if (approveListingMutation.isSuccess) { toast.success("Listing approved!"); utils.admin.getFlaggedListings.invalidate(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [approveListingMutation.isSuccess]);
+  useEffect(() => {
+    if (approveListingMutation.isError) toast.error((approveListingMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [approveListingMutation.isError]);
 
-  const rejectListingMutation = trpc.admin.rejectListing.useMutation({
-    onSuccess: () => { toast.success("Listing rejected."); utils.admin.getFlaggedListings.invalidate(); },
-    onError: (e) => toast.error(e.message),
-  });
+  const rejectListingMutation = trpc.admin.rejectListing.useMutation();
+  useEffect(() => {
+    if (rejectListingMutation.isSuccess) { toast.success("Listing rejected."); utils.admin.getFlaggedListings.invalidate(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rejectListingMutation.isSuccess]);
+  useEffect(() => {
+    if (rejectListingMutation.isError) toast.error((rejectListingMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rejectListingMutation.isError]);
 
-  const featureMutation = trpc.admin.setListingFeatured.useMutation({
-    onSuccess: () => { toast.success("Listing featured on homepage!"); utils.admin.getFlaggedListings.invalidate(); },
-    onError: (e) => toast.error(e.message),
-  });
+  const featureMutation = trpc.admin.setListingFeatured.useMutation();
+  useEffect(() => {
+    if (featureMutation.isSuccess) { toast.success("Listing featured on homepage!"); utils.admin.getFlaggedListings.invalidate(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [featureMutation.isSuccess]);
+  useEffect(() => {
+    if (featureMutation.isError) toast.error((featureMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [featureMutation.isError]);
 
-  const reviewVerificationMutation = trpc.admin.reviewVerification.useMutation({
-    onSuccess: () => { 
-      toast.success("Verification reviewed!"); 
+  const reviewVerificationMutation = trpc.admin.reviewVerification.useMutation();
+  useEffect(() => {
+    if (reviewVerificationMutation.isSuccess) {
+      toast.success("Verification reviewed!");
       utils.admin.getPendingVerifications.invalidate();
       utils.admin.getAllVerifications.invalidate();
       utils.admin.getAllUsers.invalidate();
       if (selectedUserId) utils.admin.getUserProfile.invalidate({ userId: selectedUserId });
       setAdminNotes("");
-    },
-    onError: (e) => toast.error(e.message),
-  });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewVerificationMutation.isSuccess]);
+  useEffect(() => {
+    if (reviewVerificationMutation.isError) toast.error((reviewVerificationMutation.error as any)?.message);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewVerificationMutation.isError]);
 
   const downloadCSV = () => {
     if (!financialData) return;

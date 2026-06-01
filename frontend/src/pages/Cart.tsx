@@ -10,28 +10,27 @@ export default function Cart() {
   const [, setLocation] = useLocation();
   const { data: cart, refetch, isLoading } = trpc.cart.get.useQuery();
   
-  const removeItemMutation = trpc.cart.removeItem.useMutation({
-    onSuccess: () => {
-      toast.success("Item removed from cart");
-      refetch();
-    }
-  });
+  const removeItemMutation = trpc.cart.removeItem.useMutation();
+  useEffect(() => {
+    if (removeItemMutation.isSuccess) { toast.success("Item removed from cart"); refetch(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [removeItemMutation.isSuccess]);
 
-  const updateQuantityMutation = trpc.cart.updateQuantity.useMutation({
-    onSuccess: () => {
-      refetch();
-    },
-    onError: (err) => {
-      toast.error(err.message || "Failed to update quantity");
-    }
-  });
+  const updateQuantityMutation = trpc.cart.updateQuantity.useMutation();
+  useEffect(() => {
+    if (updateQuantityMutation.isSuccess) { refetch(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateQuantityMutation.isSuccess]);
+  useEffect(() => {
+    if (updateQuantityMutation.isError) { toast.error((updateQuantityMutation.error as any)?.message || "Failed to update quantity"); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateQuantityMutation.isError]);
 
-  const clearCartMutation = trpc.cart.clear.useMutation({
-    onSuccess: () => {
-      toast.success("Cart cleared");
-      refetch();
-    }
-  });
+  const clearCartMutation = trpc.cart.clear.useMutation();
+  useEffect(() => {
+    if (clearCartMutation.isSuccess) { toast.success("Cart cleared"); refetch(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clearCartMutation.isSuccess]);
 
   if (isLoading) {
     return <div className="p-8 text-center text-gray-500">Loading cart...</div>;

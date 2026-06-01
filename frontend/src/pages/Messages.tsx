@@ -260,21 +260,7 @@ export default function Messages() {
   // Send Mutation
   // ───────────────────────────────────────────────────────────
 
-  const sendMessageMutation = trpc.messages.send.useMutation({
-    onSuccess: () => {
-      setMessageInput("");
-      handleRemoveAttachment();
-
-      if (selectedConversation?.partnerId) {
-        utils.messages.getMessages.invalidate(selectedConversation.partnerId);
-      }
-      utils.messages.getConversations.invalidate();
-    },
-
-    onError: (err) => {
-      toast.error("Failed to send: " + err.message);
-    },
-  });
+  const sendMessageMutation = trpc.messages.send.useMutation();
 
   // ───────────────────────────────────────────────────────────
   // Send Handler
@@ -295,6 +281,18 @@ export default function Messages() {
       listingId: selectedConversation.listingId ?? undefined,
       attachmentUrl: attachmentUrl || undefined,
       attachmentType: attachmentType || undefined,
+    }, {
+      onSuccess: () => {
+        setMessageInput("");
+        handleRemoveAttachment();
+        if (selectedConversation?.partnerId) {
+          utils.messages.getMessages.invalidate(selectedConversation.partnerId);
+        }
+        utils.messages.getConversations.invalidate();
+      },
+      onError: (err: any) => {
+        toast.error("Failed to send: " + err.message);
+      },
     });
   }, [
     messageInput,
