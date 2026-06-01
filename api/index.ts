@@ -2,12 +2,13 @@ import "dotenv/config";
 import type { IncomingMessage, ServerResponse } from "http";
 import type { Express } from "express";
 
+import { createApp } from "../backend/_core/createApp";
+
 let app: Express | null = null;
 let ready: Promise<void> | null = null;
 
 async function getApp(): Promise<Express> {
   if (!app) {
-    const { createApp } = await import("../backend/_core/createApp.js");
     const created = await createApp({ mode: "serverless" });
     app = created.app;
     ready = created.ready;
