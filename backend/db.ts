@@ -13,9 +13,21 @@ import fs from "fs";
 import path from "path";
 import { ENV } from './_core/env';
 import { decryptMessage } from "./_core/crypto";
+import { writeDebugLog } from "./_core/debugLog";
 
 const rawConnectionString = process.env.DATABASE_URL;
 if (!rawConnectionString) {
+  // #region agent log
+  writeDebugLog({
+    sessionId: "90368c",
+    runId: "debug_pre",
+    hypothesisId: "H1_env",
+    location: "backend/db.ts:database_url_missing",
+    message: "DATABASE_URL missing",
+    data: { DATABASE_URL_SET: false },
+    timestamp: Date.now(),
+  });
+  // #endregion
   throw new Error("DATABASE_URL environment variable is required for Postgres connection");
 }
 
@@ -31,6 +43,17 @@ function initPostgres(connectionString: string) {
 try {
   _db = initPostgres(rawConnectionString);
   console.info("[Database] Initialized Postgres via DATABASE_URL");
+  // #region agent log
+  writeDebugLog({
+    sessionId: "90368c",
+    runId: "debug_pre",
+    hypothesisId: "H3_db",
+    location: "backend/db.ts:db_init_success",
+    message: "DB initialized",
+    data: { DATABASE_URL_SET: true },
+    timestamp: Date.now(),
+  });
+  // #endregion
 } catch (err) {
   console.error("[Database] Failed to initialize Postgres DB:", err);
   throw err;
@@ -299,9 +322,33 @@ export async function getAuctions(limit: number = 20) {
   const db = await getDb();
   if (!db) return [];
 
-  return db.select().from(auctions)
-    .orderBy(desc(auctions.endTime))
-    .limit(limit);
+  const result = await db.select({
+    auction: auctions,
+    listing: listings,
+    seller: users,
+  })
+  .from(auctions)
+  .innerJoin(listings, eq(auctions.listingId, listings.id))
+  .innerJoin(users, eq(listings.userId, users.id))
+  .orderBy(desc(auctions.endTime))
+  .limit(limit);
+
+  return result.map(r => ({
+    ...r.auction,
+    listing: {
+      title: r.listing.title,
+      description: r.listing.description,
+      price: r.listing.price,
+      images: r.listing.images,
+      location: r.listing.location,
+      category: r.listing.categoryId,
+      seller: {
+        name: r.seller.name,
+        isVerified: r.seller.isVerified,
+        rating: 4.5,
+      },
+    },
+  }));
 }
 
 export async function getAuctionById(id: number) {

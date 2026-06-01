@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Star, TrendingUp, Zap } from 'lucide-react';
+import { authFetch } from '@/lib/authFetch';
 
 interface Recommendation {
   id: number;
@@ -40,7 +41,7 @@ export const RecommendationEngine: React.FC<RecommendationEngineProps> = ({
       setError(null);
 
       // Call AI recommendation API
-      const response = await fetch('/api/recommendations', {
+      const response = await authFetch('/api/recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

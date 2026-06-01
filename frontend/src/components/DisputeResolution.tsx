@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, MessageSquare, CheckCircle, Clock, FileText } from 'lucide-react';
+import { authFetch } from '@/lib/authFetch';
 
 interface Dispute {
   id: number;
@@ -45,7 +46,7 @@ export const DisputeResolution: React.FC<DisputeResolutionProps> = ({
   const fetchDispute = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/disputes/${disputeId}`);
+      const response = await authFetch(`/api/disputes/${disputeId}`);
       if (!response.ok) throw new Error('Failed to fetch dispute');
       const data = await response.json();
       setDispute(data);
@@ -61,7 +62,7 @@ export const DisputeResolution: React.FC<DisputeResolutionProps> = ({
 
     setSending(true);
     try {
-      const response = await fetch(`/api/disputes/${disputeId}/messages`, {
+      const response = await authFetch(`/api/disputes/${disputeId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: messageText }),
@@ -80,7 +81,7 @@ export const DisputeResolution: React.FC<DisputeResolutionProps> = ({
 
   const handleResolveDispute = async (resolution: string) => {
     try {
-      const response = await fetch(`/api/disputes/${disputeId}/resolve`, {
+      const response = await authFetch(`/api/disputes/${disputeId}/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resolution }),

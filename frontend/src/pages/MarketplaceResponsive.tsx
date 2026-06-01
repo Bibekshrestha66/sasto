@@ -616,7 +616,11 @@ export function MarketplaceResponsive() {
               All {cat.name}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {liveSubs && liveSubs.length > 0 ? (
+            {openDropdown === cat.id && dbSubcategories === undefined ? (
+              <DropdownMenuItem disabled className="text-gray-400 text-xs">
+                Loading subcategories…
+              </DropdownMenuItem>
+            ) : liveSubs && liveSubs.length > 0 ? (
               liveSubs.map((sub: any) => (
                 <DropdownMenuItem key={sub.id} onClick={() => {
                   setCategory(cat.id);
@@ -631,11 +635,9 @@ export function MarketplaceResponsive() {
                 </DropdownMenuItem>
               ))
             ) : (
-              openDropdown === cat.id && (
-                <DropdownMenuItem disabled className="text-gray-400 text-xs">
-                  Loading subcategories…
-                </DropdownMenuItem>
-              )
+              <DropdownMenuItem disabled className="text-gray-400 text-xs">
+                No subcategories available
+              </DropdownMenuItem>
             )}
           </DropdownMenuContent>
         </DropdownMenu>

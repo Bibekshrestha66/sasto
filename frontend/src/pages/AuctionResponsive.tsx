@@ -325,14 +325,17 @@ export function AuctionResponsive() {
   // Fetch auctions from live backend TRPC endpoint
   const { data: liveAuctionsData, isLoading } = trpc.auctions.list.useQuery({ limit: 50 }, {
     refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 2, // 2 min cache — no re-fetch on every visit
   });
 
-  const { data: trendingLocationsData, isLoading: trendingLoading } = trpc.search.trendingLocations.useQuery(undefined, {
+  const { data: trendingLocationsData } = trpc.search.trendingLocations.useQuery(undefined, {
     refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 10, // 10 min — slow-changing data
   });
 
-  const { data: topSellersData, isLoading: topSellersLoading } = trpc.search.topSellers.useQuery(undefined, {
+  const { data: topSellersData } = trpc.search.topSellers.useQuery(undefined, {
     refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 10,
   });
 
   // Map live database auctions — no mock fallback
@@ -412,17 +415,6 @@ export function AuctionResponsive() {
 
   const totalBids = auctions.reduce((s, a) => s + a.bids, 0);
   const activeAuctions = auctions.length;
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 text-orange-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading auctions...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -611,7 +603,19 @@ export function AuctionResponsive() {
 
             {/* Auction Cards */}
             <div className={`grid gap-4 ${viewMode === "grid" ? "grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-              {filteredAuctions.length > 0 ? (
+              {isLoading ? (
+                // Skeleton grid — renders instantly, no full-page spinner
+                Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 animate-pulse">
+                    <div className="aspect-square bg-gray-200" />
+                    <div className="p-4 space-y-2">
+                      <div className="h-3 bg-gray-200 rounded w-3/4" />
+                      <div className="h-4 bg-gray-200 rounded w-1/2" />
+                      <div className="h-3 bg-gray-200 rounded w-1/3" />
+                    </div>
+                  </div>
+                ))
+              ) : filteredAuctions.length > 0 ? (
                 filteredAuctions.map((auction) => (
                   <AuctionCard
                     key={auction.id}
@@ -680,7 +684,7 @@ export function AuctionResponsive() {
             </div>
 
             {/* Trending Locations - Shows real locations from database */}
-            {!trendingLoading && trendingLocationsData && trendingLocationsData.length > 0 && (
+            {trendingLocationsData && trendingLocationsData.length > 0 && (
               <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                 <h3 className="font-bold text-gray-900 mb-3 text-sm flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-orange-500" />
@@ -708,7 +712,7 @@ export function AuctionResponsive() {
             )}
 
             {/* Top Rated Sellers */}
-            {!topSellersLoading && topSellersData && topSellersData.length > 0 && (
+            {topSellersData && topSellersData.length > 0 && (
               <div className="bg-white border rounded-xl p-4 shadow-sm">
                 <h3 className="font-bold text-gray-900 mb-3 text-sm flex items-center gap-2">
                   <Users className="w-4 h-4 text-orange-500" />

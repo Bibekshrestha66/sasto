@@ -331,7 +331,8 @@ export default function PostAdModal({ isOpen, onClose }: PostAdModalProps) {
     for (let i = 0; i < images.length; i++) {
       setImageUploadProgress((prev) => ({ ...prev, [i]: true }));
       try {
-        const res = await fetch("/api/upload-url", {
+        const { authFetch } = await import("@/lib/authFetch");
+        const res = await authFetch("/api/upload-url", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ filename: images[i].name, contentType: images[i].type }),
@@ -351,11 +352,32 @@ export default function PostAdModal({ isOpen, onClose }: PostAdModalProps) {
     return uploadedUrls;
   };
 
+  const uploadVideo = async (): Promise<string | undefined> => {
+    if (!videoFile) return undefined;
+    try {
+      const { authFetch } = await import("@/lib/authFetch");
+      const res = await authFetch("/api/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: videoFile.name, contentType: videoFile.type }),
+      });
+      if (!res.ok) throw new Error("Failed to get video upload URL");
+      const { url, fileId } = await res.json();
+      const uploadRes = await fetch(url, { method: "PUT", body: videoFile, headers: { "Content-Type": videoFile.type } });
+      if (!uploadRes.ok) throw new Error("Upload failed for video");
+      return fileId;
+    } catch (err) {
+      toast.error("Failed to upload video");
+      throw err;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!validateStep()) return;
     try {
       setUploadingImages(true);
       const imageUrls = await uploadImages();
+      const videoUrl = await uploadVideo();
       await (createListingMutation as any).mutateAsync({
         title: formData.title,
         description: formData.description,
@@ -366,6 +388,7 @@ export default function PostAdModal({ isOpen, onClose }: PostAdModalProps) {
         location: formData.location,
         type: listingType as "marketplace" | "auction" | "rental",
         images: imageUrls,
+        videoUrl: videoUrl,
       });
     } catch (error) {
       console.error("Submission error:", error);

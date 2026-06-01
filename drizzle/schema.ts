@@ -84,6 +84,7 @@ export const listings = pgTable("listings", {
   featuredUntil: timestamp("featuredUntil"),
   originalPrice: real("originalPrice"),
   discount: integer("discount"),
+  videoUrl: text("videoUrl"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   expiresAt: timestamp("expiresAt"),

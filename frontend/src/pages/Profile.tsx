@@ -16,6 +16,7 @@ import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { authFetch } from "@/lib/authFetch";
 
 // ----------------------------------------------------------------------
 // Types
@@ -47,7 +48,7 @@ const useFileUpload = () => {
   const uploadFile = async (file: File): Promise<string> => {
     setIsUploading(true);
     try {
-      const res = await fetch("/api/upload-url", {
+      const res = await authFetch("/api/upload-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename: file.name, contentType: file.type }),

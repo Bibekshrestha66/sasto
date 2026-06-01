@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: sasto-marketplace
+    env: node
+    # Use pnpm since it's defined as the package manager in package.json
+    buildCommand: pnpm install && pnpm run build && pnpm run db:push
+    startCommand: pnpm run start
+    plan: starter # You can upgrade this based on your needs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 20
+      
+      # Ensure you set these values in the Render dashboard after creating the service
+      - key: DATABASE_URL
+        sync: false # Set to the connection string of your PostgreSQL database (e.g. Supabase, Render DB, Neon)
+      - key: VITE_APP_URL
+        sync: false # Set to your Render URL, e.g., https://sasto-marketplace.onrender.com
+      
+      # Clerk Auth Keys
+      - key: VITE_CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+
+      # Cloudflare R2 / AWS S3 Config (for image/video uploads)
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+
+      # Payload CMS Secret
+      - key: PAYLOAD_SECRET
+        sync: false # Set to a secure random string

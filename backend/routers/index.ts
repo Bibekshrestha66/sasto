@@ -171,6 +171,7 @@ export const appRouter = router({
         model: z.string().optional(),
         color: z.string().optional(),
         condition: z.enum(["new", "like-new", "good", "fair"]).optional(),
+        videoUrl: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
@@ -200,6 +201,7 @@ export const appRouter = router({
             ? Math.round(((input.originalPrice - input.price) / input.originalPrice) * 100) 
             : null,
           images: input.images,
+          videoUrl: input.videoUrl,
           location: input.location,
           district: input.district,
           brand: input.brand,

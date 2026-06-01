@@ -46,8 +46,8 @@ export const CATEGORIES_DATA = [
       { name: "Commercial", slug: "commercial" },
       { name: "House", slug: "house" },
       { name: "Land", slug: "land" },
-      { name: "Office Space", slug: "office-space" },
-      { name: "Others", slug: "others" },
+      { name: "Office Space", slug: "property-office-space" },
+      { name: "Others", slug: "property-others" },
       { name: "Shop", slug: "shop" },
     ],
   },
@@ -57,7 +57,7 @@ export const CATEGORIES_DATA = [
     icon: "👗",
     description: "Clothing, shoes, jewelry, and beauty products",
     subcategories: [
-      { name: "Accessories", slug: "accessories" },
+      { name: "Accessories", slug: "fashion-accessories-sub" },
       { name: "Bags", slug: "bags" },
       { name: "Jewelry", slug: "jewelry" },
       { name: "Men's Clothing", slug: "mens-clothing" },
@@ -226,7 +226,7 @@ export const CATEGORIES_DATA = [
       { name: "Carpentry", slug: "carpentry" },
       { name: "Cleaning", slug: "cleaning" },
       { name: "Consulting", slug: "consulting" },
-      { name: "Design", slug: "design" },
+      { name: "Design", slug: "services-design" },
       { name: "Electrical", slug: "electrical" },
       { name: "Painting", slug: "painting" },
       { name: "Plumbing", slug: "plumbing" },
@@ -243,10 +243,10 @@ export const CATEGORIES_DATA = [
       { name: "Co-working", slug: "co-working" },
       { name: "Industrial", slug: "industrial" },
       { name: "Land", slug: "land-commercial" },
-      { name: "Office Space", slug: "office-space" },
+      { name: "Office Space", slug: "commercial-office-space" },
       { name: "Restaurant Space", slug: "restaurant-space" },
-      { name: "Retail Shop", slug: "retail-shop" },
-      { name: "Warehouse", slug: "warehouse" },
+      { name: "Retail Shop", slug: "commercial-retail-shop" },
+      { name: "Warehouse", slug: "commercial-warehouse" },
     ],
   },
   {
@@ -286,9 +286,9 @@ export const CATEGORIES_DATA = [
     sector: "auction",
     subcategories: [
       { name: "Cars & SUVs", slug: "cars-suvs" },
-      { name: "Motorcycles", slug: "motorcycles" },
+      { name: "Motorcycles", slug: "auction-motorcycles" },
       { name: "Buses & Trucks", slug: "buses-trucks" },
-      { name: "Spare Parts", slug: "spare-parts" },
+      { name: "Spare Parts", slug: "auction-spare-parts" },
     ],
   },
   {
@@ -325,9 +325,9 @@ export const CATEGORIES_DATA = [
     description: "Homes, apartments and rooms available for rent",
     sector: "rental",
     subcategories: [
-      { name: "Apartments", slug: "apartments-flats" },
-      { name: "Houses", slug: "houses" },
-      { name: "Rooms", slug: "rooms" },
+      { name: "Apartments", slug: "rental-apartments-flats" },
+      { name: "Houses", slug: "rental-houses" },
+      { name: "Rooms", slug: "rental-rooms" },
     ],
   },
   {
@@ -337,9 +337,9 @@ export const CATEGORIES_DATA = [
     description: "Commercial spaces and business rentals for offices, retail, and warehousing",
     sector: "rental",
     subcategories: [
-      { name: "Office Space", slug: "office-space" },
-      { name: "Retail Shop", slug: "retail-shop" },
-      { name: "Warehouse", slug: "warehouse" },
+      { name: "Office Space", slug: "rental-office-space" },
+      { name: "Retail Shop", slug: "rental-retail-shop" },
+      { name: "Warehouse", slug: "rental-warehouse" },
     ],
   },
   {
@@ -390,7 +390,7 @@ export const CATEGORIES_DATA = [
       { name: "Auto Mechanic", slug: "auto-mechanic" },
       { name: "Carpenter", slug: "carpenter" },
       { name: "Demolition", slug: "demolition" },
-      { name: "Design", slug: "design" },
+      { name: "Design", slug: "skills-design" },
       { name: "Drywaller/Sheetrocking", slug: "drywaller" },
       { name: "Electrician", slug: "electrician" },
       { name: "Flooring Installer", slug: "flooring" },
@@ -405,10 +405,10 @@ export const CATEGORIES_DATA = [
       { name: "Repair & Maintenance", slug: "repair" },
       { name: "Roofer", slug: "roofer" },
       { name: "Tutoring", slug: "tutoring" },
-      { name: "Warehouse/Forklift Operator", slug: "warehouse" },
+      { name: "Warehouse/Forklift Operator", slug: "skills-warehouse" },
       { name: "Welder", slug: "welder" },
       { name: "AI Skills", slug: "ai-skills" },
-      { name: "Others", slug: "others" },
+      { name: "Others", slug: "skills-others" },
     ],
   },
 ];
@@ -454,6 +454,9 @@ export async function seedCategories() {
         mainCatId = existingCategory[0].id;
         const updates: any = {};
 
+        if (existingCategory[0].parentId !== null) {
+          updates.parentId = null;
+        }
         if (existingCategory[0].sector !== sector) {
           updates.sector = sector;
         }

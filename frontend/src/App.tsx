@@ -63,7 +63,9 @@ function Router() {
     <Suspense fallback={<PageLoader />}>
       <Switch>
         <Route path="/login" component={Login} />
+        <Route path="/login/sso-callback" component={Login} />
         <Route path="/register" component={Register} />
+        <Route path="/register/sso-callback" component={Register} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/" component={Home} />

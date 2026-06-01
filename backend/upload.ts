@@ -1,38 +1,34 @@
 import { Router } from "express";
 import multer from "multer";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
+import { getR2Client, getR2PublicBaseUrl, R2_BUCKET_NAME, R2_ACCOUNT_ID } from "./r2";
 
-// Cloudflare R2 Credentials
-const accountId = process.env.R2_ACCOUNT_ID;
-const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-const bucketName = process.env.R2_BUCKET_NAME || "sasto";
-const publicCustomDomain = process.env.R2_PUBLIC_CUSTOM_DOMAIN; // e.g. https://pub-xxx.r2.dev or https://images.sasto.com.np
-
-// Initialize R2 client using standard S3 compatibility
-const r2Client = new S3Client({
-  endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: accessKeyId || "",
-    secretAccessKey: secretAccessKey || "",
-  },
-  region: "auto",
-});
+const r2Client = getR2Client();
 
 const uploadRouter = Router();
 
-// Configure Multer for memory storage
+// Configure Multer for memory storage with a 50MB max limit to accommodate videos
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB max
 });
 
 uploadRouter.post("/image", upload.single("image"), async (req, res) => {
   try {
+    if (!r2Client) {
+      return res.status(500).json({ error: "R2 is not configured" });
+    }
     if (!req.file) {
-      return res.status(400).json({ error: "No image file provided" });
+      return res.status(400).json({ error: "No file provided" });
+    }
+    
+    const isVideo = req.file.mimetype.startsWith("video/");
+    const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+    
+    if (req.file.size > maxSize) {
+      return res.status(400).json({ error: `File too large. Max size for ${isVideo ? 'videos is 50MB' : 'images is 5MB'}` });
     }
 
     // Generate unique safe name for the file
@@ -43,7 +39,7 @@ uploadRouter.post("/image", upload.single("image"), async (req, res) => {
     // Upload object to Cloudflare R2
     await r2Client.send(
       new PutObjectCommand({
-        Bucket: bucketName,
+        Bucket: R2_BUCKET_NAME,
         Key: key,
         Body: req.file.buffer,
         ContentType: req.file.mimetype,
@@ -52,9 +48,7 @@ uploadRouter.post("/image", upload.single("image"), async (req, res) => {
 
     // Compute public URL
     // If publicCustomDomain is configured, use it, otherwise fall back to a public r2 endpoint
-    const baseUrl = publicCustomDomain 
-      ? publicCustomDomain.replace(/\/$/, "")
-      : `https://${bucketName}.${accountId}.r2.cloudflarestorage.com`;
+    const baseUrl = getR2PublicBaseUrl() || `https://${R2_BUCKET_NAME}.${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 
     const publicUrl = `${baseUrl}/${key}`;
 

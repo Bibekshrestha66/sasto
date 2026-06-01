@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { LineChart, BarChart, PieChart, TrendingUp, Users, ShoppingCart, DollarSign } from 'lucide-react';
+import { authFetch } from '@/lib/authFetch';
 
 interface AnalyticsData {
   totalRevenue: number;
@@ -27,7 +28,7 @@ export const AnalyticsDashboard: React.FC = () => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/analytics?range=${timeRange}`);
+      const response = await authFetch(`/api/analytics?range=${timeRange}`);
       if (!response.ok) throw new Error('Failed to fetch analytics');
       const data = await response.json();
       setAnalytics(data);

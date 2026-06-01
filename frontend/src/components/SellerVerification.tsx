@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Clock, AlertCircle, Upload, FileText } from 'lucide-react';
+import { authFetch } from '@/lib/authFetch';
 
 interface VerificationStep {
   id: string;
@@ -61,7 +62,7 @@ export const SellerVerification: React.FC<SellerVerificationProps> = ({
       formData.append('stepId', steps[currentStep].id);
       formData.append('sellerId', sellerId.toString());
 
-      const response = await fetch('/api/verification/upload', {
+      const response = await authFetch('/api/verification/upload', {
         method: 'POST',
         body: formData,
       });
