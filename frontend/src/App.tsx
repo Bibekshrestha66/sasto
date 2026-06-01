@@ -107,9 +107,7 @@ function Router() {
         <Route path="/seller-dashboard">
           <Redirect to="/seller/dashboard" />
         </Route>
-        <Route path="/deal/:id">
-          {(params: any) => <Redirect to={`/listing/${params.id}`} />}
-        </Route>
+        <Route path="/deal/:id" component={(props: any) => <Redirect to={`/listing/${props.params.id}`} />} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>
