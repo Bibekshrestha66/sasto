@@ -1,6 +1,7 @@
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
+import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { useCallback, useEffect, useMemo } from "react";
 
 type UseAuthOptions = {
@@ -13,22 +14,26 @@ export function useAuth(options?: UseAuthOptions) {
     options ?? {};
   const utils = trpc.useUtils();
 
+  // Get Clerk's session state — this is the source of truth for whether user is logged in
+  const { isSignedIn, isLoaded: isClerkLoaded } = useClerkAuth();
+
   const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: false,
     refetchOnWindowFocus: false,
+    // Only run the query when Clerk has loaded and user is signed in
+    enabled: isClerkLoaded && !!isSignedIn,
   });
 
-  const loginMutation = (trpc.auth as any).login?.useMutation({
-    onSuccess: (user: any) => {
-      utils.auth.me.setData(undefined, user);
-    },
-  }) || { mutateAsync: async () => {}, isPending: false, error: null };
-
-  const registerMutation = (trpc.auth as any).register?.useMutation({
-    onSuccess: (user: any) => {
-      utils.auth.me.setData(undefined, user);
-    },
-  }) || { mutateAsync: async () => {}, isPending: false, error: null };
+  // Whenever Clerk session changes, invalidate auth.me so it re-fetches with new token
+  useEffect(() => {
+    if (!isClerkLoaded) return;
+    if (isSignedIn) {
+      utils.auth.me.invalidate();
+    } else {
+      // User signed out in Clerk — clear our local cache too
+      utils.auth.me.setData(undefined, null as any);
+    }
+  }, [isSignedIn, isClerkLoaded, utils]);
 
   const logoutMutation = (trpc.auth as any).logout?.useMutation({
     onSuccess: () => {
@@ -48,7 +53,7 @@ export function useAuth(options?: UseAuthOptions) {
       }
       throw error;
     } finally {
-      utils.auth.me.setData(undefined, null);
+      utils.auth.me.setData(undefined, null as any);
       await utils.auth.me.invalidate();
     }
   }, [logoutMutation, utils]);
@@ -60,9 +65,9 @@ export function useAuth(options?: UseAuthOptions) {
     );
     return {
       user: meQuery.data ?? null,
-      loading: meQuery.isLoading || logoutMutation.isPending || loginMutation.isPending || registerMutation.isPending,
-      error: meQuery.error ?? logoutMutation.error ?? loginMutation.error ?? registerMutation.error ?? null,
-      isAuthenticated: Boolean(meQuery.data),
+      loading: !isClerkLoaded || meQuery.isLoading || logoutMutation.isPending,
+      error: meQuery.error ?? logoutMutation.error ?? null,
+      isAuthenticated: isClerkLoaded && !!isSignedIn && Boolean(meQuery.data),
     };
   }, [
     meQuery.data,
@@ -70,33 +75,30 @@ export function useAuth(options?: UseAuthOptions) {
     meQuery.isLoading,
     logoutMutation.error,
     logoutMutation.isPending,
-    loginMutation.error,
-    loginMutation.isPending,
-    registerMutation.error,
-    registerMutation.isPending,
+    isClerkLoaded,
+    isSignedIn,
   ]);
 
   useEffect(() => {
     if (!redirectOnUnauthenticated) return;
-    if (meQuery.isLoading || logoutMutation.isPending) return;
+    if (!isClerkLoaded || meQuery.isLoading || logoutMutation.isPending) return;
     if (state.user) return;
     if (typeof window === "undefined") return;
     if (window.location.pathname === redirectPath) return;
 
-    window.location.href = redirectPath
+    window.location.href = redirectPath;
   }, [
     redirectOnUnauthenticated,
     redirectPath,
     logoutMutation.isPending,
     meQuery.isLoading,
     state.user,
+    isClerkLoaded,
   ]);
 
   return {
     ...state,
     refresh: () => meQuery.refetch(),
     logout,
-    login: loginMutation.mutateAsync,
-    register: registerMutation.mutateAsync,
   };
 }

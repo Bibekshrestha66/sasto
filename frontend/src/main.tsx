@@ -50,21 +50,36 @@ if (typeof window !== "undefined") {
 }
 const apiUrl = backendBase ? `${backendBase.replace(/\/$/, "")}/api/trpc` : "/api/trpc";
 
+const getClerkToken = async (): Promise<string> => {
+  try {
+    // Wait for Clerk to be fully loaded (up to 3 seconds)
+    if (!(window as any).Clerk?.loaded) {
+      await new Promise<void>((resolve) => {
+        const interval = setInterval(() => {
+          if ((window as any).Clerk?.loaded) {
+            clearInterval(interval);
+            resolve();
+          }
+        }, 50);
+        setTimeout(() => { clearInterval(interval); resolve(); }, 3000);
+      });
+    }
+    if ((window as any).Clerk?.session) {
+      return await (window as any).Clerk.session.getToken() || "";
+    }
+  } catch (e) {
+    console.error("Failed to get Clerk token", e);
+  }
+  return "";
+};
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: apiUrl,
       transformer: superjson,
       async fetch(input, init) {
-        let token = "";
-        try {
-          if ((window as any).Clerk?.session) {
-            token = await (window as any).Clerk.session.getToken() || "";
-          }
-        } catch (e) {
-          console.error("Failed to get Clerk token", e);
-        }
-
+        const token = await getClerkToken();
         return globalThis.fetch(input, {
           ...(init ?? {}),
           headers: {
