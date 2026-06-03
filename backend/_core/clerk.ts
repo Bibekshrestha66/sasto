@@ -14,14 +14,17 @@ export const clerkClient = createClerkClient({ secretKey });
 export async function authenticateClerkUser(token: string) {
   try {
     // 1. Verify token signature and claims using JWT verification
+    console.log("[Clerk Auth] Verifying incoming Clerk token...");
     const claims = await verifyToken(token, { secretKey });
     const clerkId = claims.sub;
     if (!clerkId) {
       throw new Error("Clerk token missing subject claim (sub)");
     }
+    console.log(`[Clerk Auth] Token verified successfully. subject (clerkId): ${clerkId}`);
 
     // 2. Check if user already exists locally
     let user = await getUserByOpenId(clerkId);
+    console.log(`[Clerk Auth] Local user lookup: ${user ? 'Found (' + user.email + ')' : 'Not Found'}`);
 
     // 3. Sync profile from Clerk if user does not exist or periodically
     if (!user) {

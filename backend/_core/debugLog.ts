@@ -5,7 +5,7 @@ const SESSION_ID = "90368c";
 const INGEST_URL = "http://127.0.0.1:7884/ingest/4eb48921-d438-46ea-8ea8-0991e31d49ad";
 
 // Write under the project root regardless of where the server is started from.
-const LOG_PATH = path.resolve(import.meta.dirname, "../..", "debug-90368c.log");
+const LOG_PATH = path.resolve(process.cwd(), "debug-90368c.log");
 
 type DebugLogPayload = {
   sessionId: string;

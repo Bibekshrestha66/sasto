@@ -15,7 +15,7 @@ export function useAuth(options?: UseAuthOptions) {
   const utils = trpc.useUtils();
 
   // Get Clerk's session state — this is the source of truth for whether user is logged in
-  const { isSignedIn, isLoaded: isClerkLoaded } = useClerkAuth();
+  const { isSignedIn, isLoaded: isClerkLoaded, signOut: clerkSignOut } = useClerkAuth();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: false,
@@ -53,10 +53,13 @@ export function useAuth(options?: UseAuthOptions) {
       }
       throw error;
     } finally {
+      if (clerkSignOut) {
+        await clerkSignOut();
+      }
       utils.auth.me.setData(undefined, null as any);
       await utils.auth.me.invalidate();
     }
-  }, [logoutMutation, utils]);
+  }, [logoutMutation, utils, clerkSignOut]);
 
   const state = useMemo(() => {
     localStorage.setItem(
