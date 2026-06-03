@@ -29,6 +29,16 @@ export type CreateAppResult = {
 export async function createApp(options: CreateAppOptions): Promise<CreateAppResult> {
   const { mode, httpServer } = options;
   const app = express();
+  const cors = require("cors");
+  app.use(cors({
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "https://sasto-ochre.vercel.app",
+      "https://sasto-yqdw.onrender.com"
+    ],
+    credentials: true,
+  }));
   const isDev = mode === "development";
 
   // #region agent log
