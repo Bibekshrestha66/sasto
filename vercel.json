@@ -4,11 +4,11 @@
   "outputDirectory": "dist/public",
   "installCommand": "npm install --legacy-peer-deps",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.mjs" },
+    { "source": "/api/(.*)", "destination": "/api/index.js" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/index.mjs": {
+    "api/index.js": {
       "maxDuration": 60,
       "memory": 1024
     }
