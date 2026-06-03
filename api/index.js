@@ -327,7 +327,7 @@ var init_payload_config = __esm({
   }
 });
 
-// api/index.ts
+// api/_entry.ts
 import "dotenv/config";
 
 // backend/_core/createApp.ts
@@ -7106,7 +7106,7 @@ async function createApp(options) {
   return { app: app2, ready: ready2 };
 }
 
-// api/index.ts
+// api/_entry.ts
 var app = null;
 var ready = null;
 async function getApp() {
