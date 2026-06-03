@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import cors from "cors";
 import type { Server } from "http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import rateLimit from "express-rate-limit";
@@ -29,7 +30,6 @@ export type CreateAppResult = {
 export async function createApp(options: CreateAppOptions): Promise<CreateAppResult> {
   const { mode, httpServer } = options;
   const app = express();
-  const cors = require("cors");
   app.use(cors({
     origin: [
       "http://localhost:3000",
