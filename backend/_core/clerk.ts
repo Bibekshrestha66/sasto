@@ -34,7 +34,10 @@ export async function authenticateClerkUser(token: string) {
       const email = clerkUser.emailAddresses[0]?.emailAddress || null;
       const name = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || email?.split("@")[0] || "User";
       const avatar = clerkUser.imageUrl || null;
-      const role = (clerkUser.privateMetadata?.role as string) || "user";
+      let role = (clerkUser.privateMetadata?.role as string) || "user";
+      if (email === "bibekshrestha66@gmail.com" || email === process.env.OWNER_OPEN_ID) {
+        role = "super_admin";
+      }
 
       // Upsert into local database
       await upsertUser({
@@ -52,7 +55,10 @@ export async function authenticateClerkUser(token: string) {
     } else {
       // Lazily update lastSignedIn and check if role changed in Clerk privateMetadata
       const clerkUser = await clerkClient.users.getUser(clerkId);
-      const newRole = (clerkUser.privateMetadata?.role as string) || "user";
+      let newRole = (clerkUser.privateMetadata?.role as string) || "user";
+      if (user.email === "bibekshrestha66@gmail.com" || user.email === process.env.OWNER_OPEN_ID) {
+        newRole = "super_admin";
+      }
       
       if (user.role !== newRole || user.name !== `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim()) {
         console.log(`[Clerk Auth] Updating role/metadata locally to: ${newRole} for ${clerkId}`);

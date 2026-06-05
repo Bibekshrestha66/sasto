@@ -247,9 +247,19 @@ export async function createApp(options: CreateAppOptions): Promise<CreateAppRes
 
   if (mode === "development" && httpServer) {
     await setupVite(app, httpServer);
-  } else if (mode === "production" && httpServer) {
-    serveStatic(app);
   }
+
+  app.get("/", (_req, res) => {
+    res.send("Sasto Marketplace API Server Running\n\nAPI Status: Online\nTime: " + new Date().toISOString());
+  });
+
+  app.get("/health", (_req, res) => {
+    res.json({
+      status: "ok",
+      service: "sasto-api",
+      timestamp: new Date().toISOString()
+    });
+  });
 
   const ready = (async () => {
     try {
