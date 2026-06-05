@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -39,6 +40,8 @@ export default function SellerDashboard() {
   const [promoteListingItem, setPromoteListingItem] = useState<any>(null);
   const [selectedTier, setSelectedTier] = useState<"basic" | "standard" | "premium">("basic");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+  const [dealModal, setDealModal] = useState<{ id: number; currentPrice: number; title: string } | null>(null);
+  const [dealPrice, setDealPrice] = useState("");
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
@@ -80,6 +83,7 @@ export default function SellerDashboard() {
   const { data: gateways = [], isLoading: gatewaysLoading } = trpc.ads.getActiveGateways.useQuery(undefined);
 
   const promoteListingMutation = trpc.ads.promoteListing.useMutation();
+  const createDealMutation = trpc.seller.updateListingPrice.useMutation();
 
   const updateStatusMutation = trpc.transactions.updateStatus.useMutation();
 
@@ -328,6 +332,14 @@ export default function SellerDashboard() {
                         <Edit2 className="w-4 h-4 mr-2" />
                         Edit
                       </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 lg:w-40 border-green-200 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-2xl h-14 font-black transition-all"
+                        onClick={() => setDealModal({ id: item.id, currentPrice: item.price ?? 0, title: item.title })}
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Make Deal
+                      </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button 
@@ -508,6 +520,68 @@ export default function SellerDashboard() {
                 </Button>
               </div>
               <p className="text-center text-xs text-gray-400">Your listing will go live once admin approves the request.</p>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* ─── MAKE DEAL MODAL ─── */}
+        <Dialog open={!!dealModal} onOpenChange={(open) => { if (!open) { setDealModal(null); setDealPrice(""); } }}>
+          <DialogContent className="max-w-md rounded-2xl">
+            <DialogHeader>
+              <DialogTitle>Create a Deal / Drop Price</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600">
+                Set a discounted price for <strong>{dealModal?.title}</strong>.
+                The original price (Rs. {dealModal?.currentPrice.toLocaleString()}) will be shown with a strikethrough.
+              </p>
+              <div>
+                <Label>New Deal Price (NPR)</Label>
+                <Input
+                  type="number"
+                  placeholder="Enter discounted price"
+                  value={dealPrice}
+                  onChange={e => setDealPrice(e.target.value)}
+                  className="mt-1"
+                />
+                {dealPrice && parseFloat(dealPrice) > 0 && dealModal && parseFloat(dealPrice) < dealModal.currentPrice && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Discount: {Math.round(((dealModal.currentPrice - parseFloat(dealPrice)) / dealModal.currentPrice) * 100)}% off
+                  </p>
+                )}
+                {dealPrice && dealModal && parseFloat(dealPrice) >= dealModal.currentPrice && (
+                  <p className="text-xs text-red-500 mt-1">Deal price must be lower than current price</p>
+                )}
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => { setDealModal(null); setDealPrice(""); }}
+                >Cancel</Button>
+                <Button
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  disabled={!dealPrice || parseFloat(dealPrice) <= 0 || (dealModal ? parseFloat(dealPrice) >= dealModal.currentPrice : true) || createDealMutation.isPending}
+                  onClick={() => {
+                    if (!dealModal || !dealPrice) return;
+                    createDealMutation.mutate({
+                      listingId: dealModal.id,
+                      originalPrice: dealModal.currentPrice,
+                      price: parseFloat(dealPrice),
+                    }, {
+                      onSuccess: () => {
+                        toast.success("Deal created! Your listing now appears in Deals & Offers.");
+                        setDealModal(null);
+                        setDealPrice("");
+                        utils.seller.getListings.invalidate();
+                      },
+                      onError: (e: any) => toast.error(e.message || "Failed to create deal")
+                    });
+                  }}
+                >
+                  {createDealMutation.isPending ? "Creating..." : "Make Deal 🎉"}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>

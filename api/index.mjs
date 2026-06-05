@@ -332,7 +332,6 @@ import "dotenv/config";
 
 // backend/_core/createApp.ts
 import express2 from "express";
-import cors from "cors";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import rateLimit from "express-rate-limit";
 
@@ -3105,12 +3104,6 @@ var adminRouter = router({
     return { submissions: allSubs, total: allSubs.length, pendingCount };
   }),
   // Global Company Settings
-  getCompanyConfig: publicProcedure.query(async () => {
-    const db3 = await getDb();
-    if (!db3) return { commissionRate: 0 };
-    const config = await db3.select().from(companyConfigs).limit(1);
-    return config.length > 0 ? { commissionRate: config[0].commissionRate } : { commissionRate: 0 };
-  }),
   updateCompanyConfig: adminProcedure.input(
     z3.object({
       email: z3.string().email().optional(),
@@ -4240,7 +4233,7 @@ var searchRouter = router({
     brand: z9.string().optional(),
     model: z9.string().optional(),
     color: z9.string().optional(),
-    condition: z9.enum(["new", "like-new", "good", "fair"]).optional(),
+    condition: z9.enum(["excellent", "good", "fair", "poor"]).optional(),
     sortBy: z9.enum(["newest", "price-low", "price-high", "popular"]).default("newest"),
     page: z9.number().int().positive().default(1),
     limit: z9.number().int().positive().max(50).default(20)
@@ -5714,10 +5707,7 @@ async function authenticateClerkUser(token) {
       const email = clerkUser.emailAddresses[0]?.emailAddress || null;
       const name = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || email?.split("@")[0] || "User";
       const avatar = clerkUser.imageUrl || null;
-      let role = clerkUser.privateMetadata?.role || "user";
-      if (email === "bibekshrestha66@gmail.com" || email === process.env.OWNER_OPEN_ID) {
-        role = "super_admin";
-      }
+      const role = clerkUser.privateMetadata?.role || "user";
       await upsertUser({
         openId: clerkId,
         name,
@@ -5732,10 +5722,7 @@ async function authenticateClerkUser(token) {
       user = await getUserByOpenId(clerkId);
     } else {
       const clerkUser = await clerkClient.users.getUser(clerkId);
-      let newRole = clerkUser.privateMetadata?.role || "user";
-      if (user.email === "bibekshrestha66@gmail.com" || user.email === process.env.OWNER_OPEN_ID) {
-        newRole = "super_admin";
-      }
+      const newRole = clerkUser.privateMetadata?.role || "user";
       if (user.role !== newRole || user.name !== `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim()) {
         console.log(`[Clerk Auth] Updating role/metadata locally to: ${newRole} for ${clerkId}`);
         await upsertUser({
@@ -5901,6 +5888,18 @@ async function setupVite(app2, server) {
       vite.ssrFixStacktrace(e);
       next(e);
     }
+  });
+}
+function serveStatic(app2) {
+  const distPath = process.env.NODE_ENV === "development" ? path3.resolve(process.cwd(), "dist", "public") : path3.resolve(process.cwd(), "dist", "public");
+  if (!fs2.existsSync(distPath)) {
+    console.error(
+      `Could not find the build directory: ${distPath}, make sure to build the client first`
+    );
+  }
+  app2.use(express.static(distPath));
+  app2.use("*", (_req, res) => {
+    res.sendFile(path3.resolve(distPath, "index.html"));
   });
 }
 
@@ -6918,15 +6917,6 @@ restRouter.get("/analytics", async (req, res) => {
 async function createApp(options) {
   const { mode, httpServer } = options;
   const app2 = express2();
-  app2.use(cors({
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "https://sasto-ochre.vercel.app",
-      "https://sasto-yqdw.onrender.com"
-    ],
-    credentials: true
-  }));
   const isDev = mode === "development";
   writeDebugLog({
     sessionId: "90368c",
@@ -7102,17 +7092,9 @@ async function createApp(options) {
   });
   if (mode === "development" && httpServer) {
     await setupVite(app2, httpServer);
+  } else if (mode === "production" && httpServer) {
+    serveStatic(app2);
   }
-  app2.get("/", (_req, res) => {
-    res.send("Sasto Marketplace API Server Running\n\nAPI Status: Online\nTime: " + (/* @__PURE__ */ new Date()).toISOString());
-  });
-  app2.get("/health", (_req, res) => {
-    res.json({
-      status: "ok",
-      service: "sasto-api",
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    });
-  });
   const ready2 = (async () => {
     try {
       console.log("[Startup] Ensuring category taxonomy is seeded.");

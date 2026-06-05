@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { adminProcedure, router } from "../_core/trpc";
+import { adminProcedure, publicProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { encryptMessage, decryptMessage } from "../_core/crypto";
 import { getDb, updateCompanyConfig, getAllReports, resolveReport, createCareerOpening, archiveCareerOpening, getPaymentGateways, updatePaymentGateway } from "../db";
-import { users, listings, disputes, adminLogs, flaggedListings, verificationSubmissions, transactions, categories, messages, logisticsPartners } from "../../drizzle/schema";
+import { users, listings, disputes, adminLogs, flaggedListings, verificationSubmissions, transactions, categories, messages, logisticsPartners, companyConfigs } from "../../drizzle/schema";
 import { eq, desc, sql, gte, and, or } from "drizzle-orm";
 
 export const adminRouter = router({
@@ -703,6 +703,13 @@ export const adminRouter = router({
     }),
 
   // Global Company Settings
+  getCompanyConfig: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return { commissionRate: 0 };
+    const config = await db.select().from(companyConfigs).limit(1);
+    return config.length > 0 ? { commissionRate: config[0].commissionRate } : { commissionRate: 0 };
+  }),
+
   updateCompanyConfig: adminProcedure
     .input(
       z.object({

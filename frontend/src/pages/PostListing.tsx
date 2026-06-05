@@ -54,7 +54,6 @@ export default function PostListing() {
     title: "",
     description: "",
     price: "",
-    originalPrice: "",
     location: "",
     district: "Kathmandu",
     brand: "",
@@ -73,10 +72,13 @@ export default function PostListing() {
   const visibleCategories = categories?.filter((cat: any) => cat.slug !== "want-to-buy" && cat.slug !== "kids-clothing");
 
   const { data: subCategories, isLoading: subLoading } = trpc.categories.getSubcategories.useQuery(
-    { parentId: parseInt(formData.category, 10), sector: currentSector },
+    { parentId: parseInt(formData.category, 10) },
     { enabled: !!formData.category }
   );
   
+  const { data: companyConfig } = trpc.admin.getCompanyConfig.useQuery();
+  const commissionRate = companyConfig?.commissionRate ?? 0;
+
   const createListingMutation = trpc.listings.create.useMutation();
 
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -297,7 +299,6 @@ export default function PostListing() {
         type: typeMap[formData.type] || "marketplace",
         price: parseFloat(formData.price),
         stock: formData.stock ? parseInt(formData.stock, 10) : 1,
-        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
         images: base64Images.length > 0 ? base64Images : undefined,
         location: formData.location || undefined,
         district: formData.district || undefined,
@@ -526,7 +527,7 @@ export default function PostListing() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="price" className="text-slate-700 text-sm font-bold mb-1.5 block">Selling Price (NPR) *</Label>
+                    <Label htmlFor="price" className="text-slate-700 text-sm font-bold mb-1.5 block">Your Price (NPR) *</Label>
                     <div className="relative">
                       <Input
                         id="price"
@@ -547,24 +548,22 @@ export default function PostListing() {
                   </div>
 
                   <div>
-                    <Label htmlFor="originalPrice" className="text-slate-700 text-sm font-bold mb-1.5 block">Original Price (Optional)</Label>
-                    <div className="relative">
-                      <Input
-                        id="originalPrice"
-                        type="number"
-                        name="originalPrice"
-                        placeholder="0.00"
-                        value={formData.originalPrice}
-                        onChange={handleInputChange}
-                        className="pl-12 bg-slate-50 border-slate-200 rounded-lg pr-4 py-3 focus:ring-green-500/20 focus:border-green-500 transition-all text-slate-700 h-11"
-                        min="0"
-                        step="100"
-                      />
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 border-r border-slate-100 pr-3 text-xs">
-                        Rs.
+                    {formData.price && parseFloat(formData.price) > 0 && commissionRate > 0 && (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm shadow-sm">
+                        <div className="flex justify-between text-slate-600 mb-1">
+                          <span>Your take-home:</span>
+                          <span className="font-semibold">Rs. {parseFloat(formData.price).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-amber-700 mb-2">
+                          <span>Platform commission ({commissionRate}%):</span>
+                          <span className="font-semibold">+ Rs. {(parseFloat(formData.price) * commissionRate / 100).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-green-700 font-bold pt-2 border-t border-amber-200/60">
+                          <span>Buyer pays:</span>
+                          <span>Rs. {(parseFloat(formData.price) * (1 + commissionRate / 100)).toLocaleString()}</span>
+                        </div>
                       </div>
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-1">If entered, your ad will show in "Deals & Offers"</p>
+                    )}
                   </div>
 
                   {formData.type === "sell" && (

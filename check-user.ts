@@ -1,0 +1,1 @@
+import { db } from './backend/db'; import { users } from './drizzle/schema'; import { eq } from 'drizzle-orm'; import 'dotenv/config'; async function run() { const user = await db.select().from(users).where(eq(users.email, 'bibekshrestha66@gmail.com')); console.log(user); process.exit(0); } run();

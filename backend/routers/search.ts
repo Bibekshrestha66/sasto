@@ -80,7 +80,7 @@ export const searchRouter = router({
       brand: z.string().optional(),
       model: z.string().optional(),
       color: z.string().optional(),
-      condition: z.enum(['excellent', 'good', 'fair', 'poor']).optional(),
+      condition: z.enum(['new', 'like-new', 'good', 'fair']).optional(),
       sortBy: z.enum(['newest', 'price-low', 'price-high', 'popular']).default('newest'),
       page: z.number().int().positive().default(1),
       limit: z.number().int().positive().max(50).default(20),

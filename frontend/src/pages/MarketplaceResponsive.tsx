@@ -359,7 +359,7 @@ export function MarketplaceResponsive() {
     brand: brand || undefined,
     model: model || undefined,
     color: color !== "all" ? color : undefined,
-    condition: condition === "all" ? undefined : (condition === "new" || condition === "like-new" ? "excellent" : (condition === "good" ? "good" : "fair")) as any,
+    condition: condition === "all" ? undefined : condition as any,
     sortBy: sortBy === "newest" ? "newest" : sortBy === "price_low" ? "price-low" : sortBy === "price_high" ? "price-high" : "popular",
     page: currentPage,
     limit: itemsPerPage,
