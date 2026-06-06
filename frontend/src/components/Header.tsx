@@ -200,29 +200,31 @@ export default function Header() {
             })}
           </nav>
 
-          {/* Desktop Navigation — takes up remaining center space */}
-          <nav className="hidden md:flex items-center gap-5 flex-1 mx-6">
-            {navItems.map((item) => {
-              const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`text-sm font-medium transition-colors whitespace-nowrap ${isActive ? "text-green-600" : "text-gray-700 hover:text-green-600"}`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex items-center gap-3 xl:gap-5 flex-1 mx-2 lg:mx-4 min-w-0 overflow-hidden">
+            <div className="flex items-center gap-3 xl:gap-5 overflow-x-auto no-scrollbar mask-edges">
+              {navItems.map((item) => {
+                const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className={`text-sm font-medium transition-colors whitespace-nowrap ${isActive ? "text-green-600" : "text-gray-700 hover:text-green-600"}`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
           </nav>
 
           {/* Desktop Search */}
-          <div className="hidden md:flex items-center w-[220px] xl:w-[280px] relative shrink-0">
+          <div className="hidden md:flex items-center flex-1 max-w-[220px] xl:max-w-[280px] relative shrink mx-2">
             <SearchBar />
           </div>
 
           {/* Desktop Auth & Actions */}
-          <div className="hidden md:flex items-center gap-2 shrink-0 ml-3">
+          <div className="hidden md:flex items-center gap-1 xl:gap-2 shrink-0">
             {isAuthenticated ? (
               <>
                 {(user?.role === "super_admin" || user?.role === "admin") && (
