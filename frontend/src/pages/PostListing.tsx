@@ -59,7 +59,7 @@ export default function PostListing() {
     brand: "",
     model: "",
     color: "",
-    condition: "new",
+    condition: "",
     phone: "",
     email: "",
     stock: "1",
@@ -594,6 +594,7 @@ export default function PostListing() {
                         className="w-full h-11 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 appearance-none focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-slate-700 text-sm"
                         required
                       >
+                        <option value="" disabled hidden>Select Condition</option>
                         <option value="new">Brand New</option>
                         <option value="like-new">Like New / Mint</option>
                         <option value="good">Good Condition</option>

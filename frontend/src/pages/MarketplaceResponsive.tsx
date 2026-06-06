@@ -1314,22 +1314,7 @@ export function MarketplaceResponsive() {
                 </div>
               )}
 
-              {/* Sponsored / Sell Ad */}
-              <div className="bg-white border rounded-xl p-4 text-center">
-                <p className="text-xs text-gray-400 mb-2">Sponsored</p>
-                <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-lg p-4 flex flex-col items-center">
-                  <p className="text-green-600 font-bold text-sm">Want to sell on Sasto?</p>
-                  <p className="text-gray-500 text-xs mt-1 mb-3">Reach 50,000+ potential buyers daily</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-[10px] border-green-400 text-green-600 rounded-full hover:bg-green-600 hover:text-white transition"
-                    onClick={() => setLocation("/post-listing")}
-                  >
-                    Start Selling →
-                  </Button>
-                </div>
-              </div>
+              {/* Removed redundant Sponsored / Sell Ad box since there's a Post Ad button in the header */}
 
               {/* Newsletter Subscription */}
               <div className="bg-white border rounded-xl p-4">
