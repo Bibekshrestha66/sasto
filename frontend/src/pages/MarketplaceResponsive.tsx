@@ -523,7 +523,7 @@ export function MarketplaceResponsive() {
       const Icon = cat.icon;
       const isActive = category === cat.id;
 
-      const buttonClassName = `flex-shrink-0 px-3.5 py-1 rounded-full text-[13px] font-medium transition whitespace-nowrap ${isActive
+      const buttonClassName = `flex-shrink-0 min-w-[90px] max-w-[110px] w-[calc((100vw-48px)/3)] flex items-center justify-center gap-1 py-1.5 rounded-full text-[12px] font-medium transition overflow-hidden ${isActive
         ? "bg-green-600 text-white shadow-sm"
         : "bg-white text-gray-600 border border-gray-200 hover:bg-green-50"
         }`;
@@ -546,8 +546,8 @@ export function MarketplaceResponsive() {
             className={buttonClassName}
             aria-label={`Filter by ${cat.name}`}
           >
-            <Icon className="w-4 h-4 inline mr-1" />
-            {cat.name}
+            <Icon className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">{cat.name}</span>
           </button>
         );
       }
@@ -597,9 +597,9 @@ export function MarketplaceResponsive() {
                 }
               }}
             >
-              <Icon className="w-4 h-4 inline mr-1" />
-              {cat.name}
-              <ChevronDown className="w-3 h-3 ml-1" />
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{cat.name}</span>
+              <ChevronDown className="w-3 h-3 flex-shrink-0" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -919,7 +919,7 @@ export function MarketplaceResponsive() {
 
               {/* Category Pills */}
               <div className="mb-6">
-                <div className="flex gap-2 flex-wrap">{renderCategoryPills}</div>
+                <div className="flex flex-nowrap overflow-x-auto scrollbar-hide gap-2 w-full pb-1">{renderCategoryPills}</div>
               </div>
 
               {/* Filter Tabs */}

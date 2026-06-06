@@ -238,14 +238,14 @@ export function RentalResponsive() {
               />
             </div>
 
-            {/* Horizontal Category Pills - Removed "Rentals" text */}
-            <div className="mb-6 flex flex-wrap gap-2">
+            {/* Horizontal Category Pills */}
+            <div className="mb-6 flex flex-nowrap overflow-x-auto scrollbar-hide gap-2 w-full pb-1">
               {CATEGORIES.map((cat) => {
                 const Icon = cat.icon;
                 const hasSubcategories = SUBCATEGORIES[cat.id] !== undefined;
                 const isActive = selectedCategory === cat.id;
 
-                const buttonClass = `flex items-center px-3 py-1.5 rounded-full text-xs sm:text-[13px] font-medium transition ${isActive
+                const buttonClass = `flex-shrink-0 min-w-[90px] max-w-[110px] w-[calc((100vw-48px)/3)] flex items-center justify-center gap-1 py-1.5 rounded-full text-[12px] font-medium transition overflow-hidden ${isActive
                   ? "bg-purple-600 text-white shadow-sm"
                   : "bg-white text-gray-600 border border-gray-200 hover:bg-purple-50"
                   }`;
@@ -279,9 +279,9 @@ export function RentalResponsive() {
                             }
                           }}
                         >
-                          <Icon className="w-4 h-4 inline mr-1" />
-                          {cat.name}
-                          <ChevronDown className="w-3 h-3 ml-1 opacity-70" />
+                          <Icon className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">{cat.name}</span>
+                          <ChevronDown className="w-3 h-3 flex-shrink-0 opacity-70" />
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="bg-white min-w-[150px]">
@@ -323,8 +323,8 @@ export function RentalResponsive() {
                     }}
                     className={buttonClass}
                   >
-                    <Icon className="w-4 h-4 inline mr-1" />
-                    {cat.name}
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">{cat.name}</span>
                   </button>
                 );
               })}
