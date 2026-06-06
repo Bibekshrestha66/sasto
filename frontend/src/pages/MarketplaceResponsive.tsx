@@ -523,7 +523,7 @@ export function MarketplaceResponsive() {
       const Icon = cat.icon;
       const isActive = category === cat.id;
 
-      const buttonClassName = `flex-shrink-0 min-w-[90px] max-w-[110px] w-[calc((100vw-48px)/3)] flex items-center justify-center gap-1 py-1.5 rounded-full text-[12px] font-medium transition overflow-hidden ${isActive
+      const buttonClassName = `flex-shrink-0 min-w-[90px] max-w-[120px] flex items-center justify-center gap-1 px-2 py-1.5 rounded-full text-[12px] font-medium transition overflow-hidden ${isActive
         ? "bg-green-600 text-white shadow-sm"
         : "bg-white text-gray-600 border border-gray-200 hover:bg-green-50"
         }`;
