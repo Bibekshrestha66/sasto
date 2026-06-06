@@ -919,7 +919,7 @@ export function MarketplaceResponsive() {
 
               {/* Category Pills */}
               <div className="mb-6">
-                <div className="flex flex-nowrap overflow-x-auto scrollbar-hide gap-2 w-full pb-1">{renderCategoryPills}</div>
+                <div className="flex flex-wrap gap-2 w-full">{renderCategoryPills}</div>
               </div>
 
               {/* Filter Tabs */}

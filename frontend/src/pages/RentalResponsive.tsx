@@ -239,7 +239,7 @@ export function RentalResponsive() {
             </div>
 
             {/* Horizontal Category Pills */}
-            <div className="mb-6 flex flex-nowrap overflow-x-auto scrollbar-hide gap-2 w-full pb-1">
+            <div className="mb-6 flex flex-wrap gap-2 w-full">
               {CATEGORIES.map((cat) => {
                 const Icon = cat.icon;
                 const hasSubcategories = SUBCATEGORIES[cat.id] !== undefined;
