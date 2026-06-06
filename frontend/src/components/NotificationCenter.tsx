@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Bell, X, Check, AlertCircle, Info, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -28,6 +28,22 @@ export default function NotificationCenter({
   onDelete,
 }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -64,7 +80,7 @@ export default function NotificationCenter({
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       {/* Notification Bell */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -163,14 +179,7 @@ export default function NotificationCenter({
             )}
           </div>
 
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="p-3 border-t border-gray-200 text-center">
-              <Button variant="ghost" size="sm" className="text-xs text-gray-600">
-                View all notifications
-              </Button>
-            </div>
-          )}
+          {/* Footer - Removed dummy View All button to encourage scrolling */}
         </div>
       )}
     </div>

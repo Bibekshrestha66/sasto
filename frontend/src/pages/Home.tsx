@@ -224,12 +224,6 @@ export default function HomePage() {
           <p className="text-white/90 text-base mb-6">Buy, Sell - Everything you need in one place</p>
           <div className="flex flex-wrap justify-center gap-4">
             <button
-              onClick={() => navigate("/deals-and-offers")}
-              className="bg-white/20 hover:bg-white/30 rounded-full px-6 py-2.5 text-base font-medium text-white transition-all duration-200"
-            >
-              Deals & Offers
-            </button>
-            <button
               onClick={() => navigate("/marketplace")}
               className="bg-white/20 hover:bg-white/30 rounded-full px-6 py-2.5 text-base font-medium text-white transition-all duration-200"
             >
@@ -246,6 +240,12 @@ export default function HomePage() {
               className="bg-white/20 hover:bg-white/30 rounded-full px-6 py-2.5 text-base font-medium text-white transition-all duration-200"
             >
               Rentals
+            </button>
+            <button
+              onClick={() => navigate("/deals-and-offers")}
+              className="bg-white/20 hover:bg-white/30 rounded-full px-6 py-2.5 text-base font-medium text-white transition-all duration-200"
+            >
+              Deals
             </button>
           </div>
         </div>
