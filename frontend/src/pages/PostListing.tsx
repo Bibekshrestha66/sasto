@@ -595,10 +595,10 @@ export default function PostListing() {
                         required
                       >
                         <option value="" disabled hidden>Select Condition</option>
-                        <option value="new">Brand New</option>
-                        <option value="like-new">Like New / Mint</option>
-                        <option value="good">Good Condition</option>
-                        <option value="fair">Fair / Used</option>
+                        <option value="new">New</option>
+                        <option value="like-new">Like New</option>
+                        <option value="good">Good</option>
+                        <option value="fair">Fair</option>
                       </select>
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                         <ChevronDown className="w-3.5 h-3.5" />

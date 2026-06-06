@@ -200,22 +200,29 @@ export default function Header() {
             })}
           </nav>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            {navItems.map((item) => (
-              <Link key={item.label} href={item.href} className="text-sm font-medium text-gray-700 hover:text-green-600 transition-colors">
-                {item.label}
-              </Link>
-            ))}
+          {/* Desktop Navigation — takes up remaining center space */}
+          <nav className="hidden md:flex items-center gap-5 flex-1 mx-6">
+            {navItems.map((item) => {
+              const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={`text-sm font-medium transition-colors whitespace-nowrap ${isActive ? "text-green-600" : "text-gray-700 hover:text-green-600"}`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* Desktop Search */}
-          <div className="hidden md:flex items-center flex-1 max-w-[260px] mx-4 relative">
+          <div className="hidden md:flex items-center w-[220px] xl:w-[280px] relative shrink-0">
             <SearchBar />
           </div>
 
           {/* Desktop Auth & Actions */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2 shrink-0 ml-3">
             {isAuthenticated ? (
               <>
                 {(user?.role === "super_admin" || user?.role === "admin") && (
