@@ -131,8 +131,8 @@ export default function Header() {
           </nav>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-3 xl:gap-5 flex-1 mx-2 lg:mx-4 min-w-0 overflow-hidden">
-            <div className="flex items-center gap-3 xl:gap-5 overflow-x-auto no-scrollbar mask-edges">
+          <nav className="hidden lg:flex items-center justify-center gap-3 xl:gap-5 flex-1 mx-2 lg:mx-4 min-w-0 overflow-hidden">
+            <div className="flex items-center justify-center gap-3 xl:gap-5 overflow-x-auto no-scrollbar mask-edges w-full">
               {navItems.map((item) => {
                 const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
                 return (
