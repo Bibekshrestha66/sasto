@@ -523,7 +523,7 @@ export function MarketplaceResponsive() {
       const Icon = cat.icon;
       const isActive = category === cat.id;
 
-      const buttonClassName = `flex-shrink-0 min-w-[90px] max-w-[120px] flex items-center justify-center gap-1 px-2 py-1.5 rounded-full text-[12px] font-medium transition overflow-hidden ${isActive
+      const buttonClassName = `w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded-full text-[12px] font-medium transition overflow-hidden ${isActive
         ? "bg-green-600 text-white shadow-sm"
         : "bg-white text-gray-600 border border-gray-200 hover:bg-green-50"
         }`;
@@ -919,7 +919,7 @@ export function MarketplaceResponsive() {
 
               {/* Category Pills */}
               <div className="mb-6">
-                <div className="flex flex-wrap gap-2 w-full">{renderCategoryPills}</div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">{renderCategoryPills}</div>
               </div>
 
               {/* Filter Tabs */}
