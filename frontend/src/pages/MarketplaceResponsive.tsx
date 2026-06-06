@@ -8,7 +8,7 @@ import {
   TrendingUp, Star, Home, Car, Smartphone, Sofa, Shirt, BookOpen, Bike,
   Sparkles, Bell, Repeat2, X, ChevronDown, Briefcase, Wrench, Dog, Baby, Building,
   MoreHorizontal, Share2, Flag, Mail, ShoppingCart, Stethoscope, Laptop, Sprout,
-  Dumbbell, GraduationCap, ExternalLink, Bed
+  Dumbbell, GraduationCap, ExternalLink, Bed, Shield, Users
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
