@@ -86,7 +86,7 @@ export default function NotificationCenter({
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 text-gray-600 hover:text-gray-900 transition"
       >
-        <Bell className="h-6 w-6" />
+        <Bell className="w-[18px] h-[18px]" />
         {unreadCount > 0 && (
           <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs">
             {unreadCount}

@@ -1262,11 +1262,76 @@ export function MarketplaceResponsive() {
 
               <FeaturedAdCarousel title="Featured Deals" accentColor="green" />
 
+              {/* Trending Ads */}
+              <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-3 text-sm flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  Trending Ads
+                </h3>
+                <div className="space-y-4">
+                  {[...rawListings]
+                    .sort((a, b) => (b.views || 0) - (a.views || 0))
+                    .slice(0, 4)
+                    .map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex gap-3 items-center p-2 rounded hover:bg-gray-50 cursor-pointer transition-all border-b border-gray-100 last:border-0 pb-3 last:pb-0"
+                        onClick={() => setLocation(`/listing/${item.id}`)}
+                      >
+                        <div className="w-14 h-14 bg-gray-100 rounded-md overflow-hidden shrink-0 relative">
+                          <img src={item.images?.[0] || `https://picsum.photos/seed/${item.id}/400/400`} className="w-full h-full object-cover" alt="" />
+                          {(item as any).isFeatured && (
+                            <div className="absolute top-0 left-0 bg-green-500 text-white text-[8px] font-bold px-1 py-0.5 rounded-br-md">Featured</div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-gray-800 truncate mb-1">{item.title}</p>
+                          <p className="text-xs text-green-600 font-bold">NPR {parseFloat(String(item.price || 0)).toLocaleString()}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Eye className="w-3 h-3" /> {item.views || 0} views</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Trust Section */}
+              <div className="bg-white border border-gray-200 rounded-xl p-4">
+                <h3 className="font-bold text-gray-900 mb-3 text-sm">Why Buy With Us?</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-4 h-4 text-green-500" />
+                    <span className="text-xs text-gray-600">100% Secure Transactions</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Users className="w-4 h-4 text-green-500" />
+                    <span className="text-xs text-gray-600">Verified Sellers Only</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className="w-4 h-4 text-green-500" />
+                    <span className="text-xs text-gray-600">Best Deals Guaranteed</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sponsored */}
+              <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
+                <p className="text-xs text-gray-400 mb-2">Sponsored</p>
+                <div className="bg-green-50 rounded-lg p-4 flex flex-col items-center">
+                  <p className="text-green-600 font-bold text-sm">Want to see your ad here?</p>
+                  <p className="text-gray-500 text-[10px] mt-1 mb-3">Reach 50,000+ potential buyers daily</p>
+                  <Button variant="outline" size="sm" className="h-7 text-[10px] border-green-400 text-green-600 rounded-full" onClick={() => setLocation("/post-listing")}>
+                    Promote Now
+                  </Button>
+                </div>
+              </div>
+
               {/* Trending Locations – now uses backend data */}
               {!trendingLoading && trendingLocationsData && trendingLocationsData.length > 0 && (
                 <div className="bg-white border rounded-xl p-4">
                   <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-green-500" />
+                    <MapPin className="w-4 h-4 text-green-500" />
                     Trending Locations
                   </h3>
                   <div className="space-y-3">
@@ -1289,7 +1354,10 @@ export function MarketplaceResponsive() {
               {/* Top Rated Sellers – using new data source */}
               {!topSellersLoading && topSellersData && topSellersData.length > 0 && (
                 <div className="bg-white border rounded-xl p-4">
-                  <h3 className="font-bold text-sm mb-3">Top Rated Sellers</h3>
+                  <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-green-500" />
+                    Top Rated Sellers
+                  </h3>
                   <div className="space-y-3">
                     {topSellersData.slice(0, 5).map((seller) => (
                       <div
@@ -1313,8 +1381,6 @@ export function MarketplaceResponsive() {
                   </div>
                 </div>
               )}
-
-              {/* Removed redundant Sponsored / Sell Ad box since there's a Post Ad button in the header */}
 
               {/* Newsletter Subscription */}
               <div className="bg-white border rounded-xl p-4">
