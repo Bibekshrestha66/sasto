@@ -564,8 +564,20 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950 flex" style={{ fontFamily: "'Inter', sans-serif" }}>
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden" 
+          onClick={() => setSidebarOpen(false)} 
+        />
+      )}
+      
       {/* ─── SIDEBAR ─── */}
-      <aside className={`${sidebarOpen ? "w-64" : "w-16"} transition-all duration-300 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 z-30 sticky top-0 h-screen overflow-hidden`}>
+      <aside className={`
+        fixed md:sticky top-0 left-0 h-screen z-50
+        transition-all duration-300 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 overflow-hidden
+        ${sidebarOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full md:w-16 md:translate-x-0"}
+      `}>
         {/* Logo */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between h-16 shrink-0">
           {sidebarOpen && (
@@ -576,8 +588,11 @@ export default function SuperAdminDashboard() {
               <span className="font-black text-white text-sm tracking-tight">Sasto Admin</span>
             </div>
           )}
-          <button onClick={() => setSidebarOpen(v => !v)} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition">
+          <button onClick={() => setSidebarOpen(v => !v)} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition hidden md:block">
             <Menu className="w-4 h-4" />
+          </button>
+          <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition md:hidden">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -589,7 +604,10 @@ export default function SuperAdminDashboard() {
             return (
               <button
                 key={item.value}
-                onClick={() => setSelectedTab(item.value)}
+                onClick={() => {
+                  setSelectedTab(item.value);
+                  if (window.innerWidth < 768) setSidebarOpen(false);
+                }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all group ${
                   active
                     ? "bg-slate-800 text-white shadow-inner"
@@ -631,10 +649,18 @@ export default function SuperAdminDashboard() {
       {/* ─── MAIN CONTENT ─── */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Bar */}
-        <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-20 shrink-0">
-          <div>
-            <h1 className="text-sm font-bold text-white capitalize">{navItems.find(n => n.value === selectedTab)?.label ?? "Dashboard"}</h1>
-            <p className="text-[10px] text-slate-400">Sasto Staff Admin Console</p>
+        <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 md:px-6 sticky top-0 z-20 shrink-0">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setSidebarOpen(true)} 
+              className="md:hidden p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-sm font-bold text-white capitalize">{navItems.find(n => n.value === selectedTab)?.label ?? "Dashboard"}</h1>
+              <p className="text-[10px] text-slate-400 hidden sm:block">Sasto Staff Admin Console</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {/* Pending verification alert */}
