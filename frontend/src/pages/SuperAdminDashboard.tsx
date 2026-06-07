@@ -39,6 +39,7 @@ export default function SuperAdminDashboard() {
   const [banReason, setBanReason] = useState<Record<number, string>>({});
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Sponsored ads state
   const [promotionStatusFilter, setPromotionStatusFilter] = useState("");
@@ -908,7 +909,7 @@ export default function SuperAdminDashboard() {
                                               {imageFields.map(([key, val]: [string, any]) => (
                                                 <div key={key} className="space-y-1.5">
                                                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{key.replace(/([A-Z])/g, ' $1')}</p>
-                                                  <a href={val as string} target="_blank" rel="noreferrer"
+                                                  <button type="button" onClick={() => setSelectedImage(val as string)}
                                                     className="block w-full rounded-xl overflow-hidden border-2 border-slate-200 hover:border-blue-500 transition-all shadow-sm hover:shadow-lg group relative bg-slate-100">
                                                     <img src={val as string} alt={key} className="w-full h-40 object-cover"
                                                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -917,7 +918,7 @@ export default function SuperAdminDashboard() {
                                                         <Eye className="w-3.5 h-3.5" /> View Full
                                                       </div>
                                                     </div>
-                                                  </a>
+                                                  </button>
                                                 </div>
                                               ))}
                                             </div>
@@ -1016,7 +1017,7 @@ export default function SuperAdminDashboard() {
                                       {imageFields.map(([key, value]: [string, any]) => (
                                         <div key={key} className="space-y-1.5">
                                           <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{key.replace(/([A-Z])/g, ' $1')}</p>
-                                          <a href={value as string} target="_blank" rel="noreferrer"
+                                          <button type="button" onClick={() => setSelectedImage(value as string)}
                                             className="block w-full rounded-xl overflow-hidden border-2 border-slate-200 hover:border-green-500 transition-all shadow-sm hover:shadow-lg group relative bg-slate-100">
                                             <img
                                               src={value as string}
@@ -1029,7 +1030,7 @@ export default function SuperAdminDashboard() {
                                                 <Eye className="w-3.5 h-3.5" /> View Full
                                               </div>
                                             </div>
-                                          </a>
+                                          </button>
                                         </div>
                                       ))}
                                     </div>
@@ -2510,6 +2511,22 @@ export default function SuperAdminDashboard() {
           </Dialog>
         </Tabs>
       </div>
+
+      {/* Image Lightbox Modal */}
+      {selectedImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setSelectedImage(null)}>
+          <div className="relative max-w-5xl max-h-[90vh] w-full flex items-center justify-center">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute -top-12 right-0 md:-right-12 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img src={selectedImage} alt="Full view" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
