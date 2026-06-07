@@ -2,6 +2,7 @@
   "name": "sasto_marketplace",
   "version": "1.0.0",
   "license": "MIT",
+  "type": "module",
   "scripts": {
     "dev": "tsx watch backend/_core/index.ts",
     "build": "vite build && esbuild backend/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && esbuild api/_entry.ts --platform=node --packages=external --bundle --format=esm --outfile=api/index.js",
