@@ -2761,67 +2761,83 @@ var adminRouter = router({
       rejectedListings: totalListings.filter((l) => l.status === "rejected").length
     };
   }),
-  // Advanced Analytics
-  getAdvancedAnalytics: adminProcedure.input(z3.object({ timeframe: z3.enum(["daily", "weekly", "bi_weekly", "monthly", "quarterly", "half_year", "yearly"]).default("monthly") })).query(async ({ input }) => {
+  // Advanced Analytics — supports both preset timeframe AND custom date range
+  getAdvancedAnalytics: adminProcedure.input(z3.object({
+    timeframe: z3.enum(["daily", "weekly", "bi_weekly", "monthly", "quarterly", "half_year", "yearly", "custom"]).default("monthly"),
+    startDate: z3.string().optional(),
+    // ISO date string for custom range
+    endDate: z3.string().optional()
+    // ISO date string for custom range
+  })).query(async ({ input }) => {
     const db3 = await getDb();
     const allUsers = await db3.select().from(users);
     const allListings = await db3.select().from(listings);
     const allTransactions = await db3.select().from(transactions).where(eq5(transactions.status, "completed"));
     const now = /* @__PURE__ */ new Date();
-    let startDate = /* @__PURE__ */ new Date();
-    switch (input.timeframe) {
-      case "daily":
-        startDate.setDate(now.getDate() - 30);
-        break;
-      // last 30 days
-      case "weekly":
-        startDate.setDate(now.getDate() - 90);
-        break;
-      // last 12 weeks
-      case "bi_weekly":
-        startDate.setDate(now.getDate() - 180);
-        break;
-      case "monthly":
-        startDate.setMonth(now.getMonth() - 12);
-        break;
-      // last 12 months
-      case "quarterly":
-        startDate.setFullYear(now.getFullYear() - 3);
-        break;
-      case "half_year":
-        startDate.setFullYear(now.getFullYear() - 5);
-        break;
-      case "yearly":
-        startDate.setFullYear(now.getFullYear() - 10);
-        break;
+    let rangeStart = /* @__PURE__ */ new Date();
+    let rangeEnd = now;
+    if (input.timeframe === "custom" && input.startDate && input.endDate) {
+      rangeStart = new Date(input.startDate);
+      rangeEnd = new Date(input.endDate);
+      rangeEnd.setHours(23, 59, 59, 999);
+    } else {
+      switch (input.timeframe) {
+        case "daily":
+          rangeStart.setDate(now.getDate() - 30);
+          break;
+        case "weekly":
+          rangeStart.setDate(now.getDate() - 90);
+          break;
+        case "bi_weekly":
+          rangeStart.setDate(now.getDate() - 180);
+          break;
+        case "monthly":
+          rangeStart.setMonth(now.getMonth() - 12);
+          break;
+        case "quarterly":
+          rangeStart.setFullYear(now.getFullYear() - 3);
+          break;
+        case "half_year":
+          rangeStart.setFullYear(now.getFullYear() - 5);
+          break;
+        case "yearly":
+          rangeStart.setFullYear(now.getFullYear() - 10);
+          break;
+      }
     }
+    const diffDays = Math.ceil((rangeEnd.getTime() - rangeStart.getTime()) / 864e5);
     const getGroupKey = (date) => {
-      if (input.timeframe === "daily") return date.toISOString().split("T")[0];
-      if (input.timeframe === "weekly") {
+      if (diffDays <= 60 || input.timeframe === "daily") return date.toISOString().split("T")[0];
+      if (diffDays <= 180 || input.timeframe === "weekly") {
         const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
         const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 864e5;
         return `${date.getFullYear()}-W${Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7)}`;
       }
-      if (input.timeframe === "monthly") return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
       if (input.timeframe === "yearly") return `${date.getFullYear()}`;
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     };
     const chartData = {};
     allTransactions.forEach((t2) => {
-      if (!t2.createdAt || new Date(t2.createdAt) < startDate) return;
-      const key = getGroupKey(new Date(t2.createdAt));
+      if (!t2.createdAt) return;
+      const d = new Date(t2.createdAt);
+      if (d < rangeStart || d > rangeEnd) return;
+      const key = getGroupKey(d);
       if (!chartData[key]) chartData[key] = { revenue: 0, newUsers: 0, newListings: 0 };
       chartData[key].revenue += Number(t2.amount);
     });
     allUsers.forEach((u) => {
-      if (!u.createdAt || new Date(u.createdAt) < startDate) return;
-      const key = getGroupKey(new Date(u.createdAt));
+      if (!u.createdAt) return;
+      const d = new Date(u.createdAt);
+      if (d < rangeStart || d > rangeEnd) return;
+      const key = getGroupKey(d);
       if (!chartData[key]) chartData[key] = { revenue: 0, newUsers: 0, newListings: 0 };
       chartData[key].newUsers += 1;
     });
     allListings.forEach((l) => {
-      if (!l.createdAt || new Date(l.createdAt) < startDate) return;
-      const key = getGroupKey(new Date(l.createdAt));
+      if (!l.createdAt) return;
+      const d = new Date(l.createdAt);
+      if (d < rangeStart || d > rangeEnd) return;
+      const key = getGroupKey(d);
       if (!chartData[key]) chartData[key] = { revenue: 0, newUsers: 0, newListings: 0 };
       chartData[key].newListings += 1;
     });
@@ -2829,38 +2845,60 @@ var adminRouter = router({
       date: key,
       ...chartData[key]
     }));
+    const periodRevenue = allTransactions.filter((t2) => t2.createdAt && new Date(t2.createdAt) >= rangeStart && new Date(t2.createdAt) <= rangeEnd).reduce((sum2, t2) => sum2 + Number(t2.amount), 0);
+    const periodTransactions = allTransactions.filter((t2) => t2.createdAt && new Date(t2.createdAt) >= rangeStart && new Date(t2.createdAt) <= rangeEnd).length;
+    const periodNewUsers = allUsers.filter((u) => u.createdAt && new Date(u.createdAt) >= rangeStart && new Date(u.createdAt) <= rangeEnd).length;
+    const periodNewListings = allListings.filter((l) => l.createdAt && new Date(l.createdAt) >= rangeStart && new Date(l.createdAt) <= rangeEnd).length;
+    const avgOrderValue = periodTransactions > 0 ? Math.round(periodRevenue / periodTransactions) : 0;
+    const categoryBreakdown = {};
+    allListings.forEach((l) => {
+      if (!l.createdAt) return;
+      const d = new Date(l.createdAt);
+      if (d < rangeStart || d > rangeEnd) return;
+      const catId = String(l.categoryId);
+      categoryBreakdown[catId] = (categoryBreakdown[catId] || 0) + 1;
+    });
     const sellerStats = {};
     allTransactions.forEach((t2) => {
+      if (!t2.createdAt) return;
+      const d = new Date(t2.createdAt);
+      if (d < rangeStart || d > rangeEnd) return;
       if (t2.sellerId) {
         if (!sellerStats[t2.sellerId]) sellerStats[t2.sellerId] = { revenue: 0, sales: 0 };
         sellerStats[t2.sellerId].revenue += Number(t2.amount);
         sellerStats[t2.sellerId].sales += 1;
       }
     });
-    const topSellersIds = Object.keys(sellerStats).sort((a, b) => sellerStats[Number(b)].revenue - sellerStats[Number(a)].revenue).slice(0, 5).map(Number);
+    const topSellersIds = Object.keys(sellerStats).sort((a, b) => sellerStats[Number(b)].revenue - sellerStats[Number(a)].revenue).slice(0, 10).map(Number);
     const topSellers = allUsers.filter((u) => topSellersIds.includes(u.id)).map((u) => ({
       ...u,
-      revenue: sellerStats[u.id].revenue,
-      sales: sellerStats[u.id].sales
+      revenue: sellerStats[u.id]?.revenue ?? 0,
+      sales: sellerStats[u.id]?.sales ?? 0
     })).sort((a, b) => b.revenue - a.revenue);
     const productStats = {};
     allTransactions.forEach((t2) => {
+      if (!t2.createdAt) return;
+      const d = new Date(t2.createdAt);
+      if (d < rangeStart || d > rangeEnd) return;
       if (t2.listingId) {
         if (!productStats[t2.listingId]) productStats[t2.listingId] = { revenue: 0, sales: 0 };
         productStats[t2.listingId].revenue += Number(t2.amount);
         productStats[t2.listingId].sales += 1;
       }
     });
-    const topProductIds = Object.keys(productStats).sort((a, b) => productStats[Number(b)].revenue - productStats[Number(a)].revenue).slice(0, 5).map(Number);
+    const topProductIds = Object.keys(productStats).sort((a, b) => productStats[Number(b)].revenue - productStats[Number(a)].revenue).slice(0, 10).map(Number);
     const topProducts = allListings.filter((l) => topProductIds.includes(l.id)).map((l) => ({
       ...l,
-      revenue: productStats[l.id].revenue,
-      sales: productStats[l.id].sales
+      revenue: productStats[l.id]?.revenue ?? 0,
+      sales: productStats[l.id]?.sales ?? 0
     })).sort((a, b) => b.revenue - a.revenue);
+    const suspiciousUserIds = allUsers.filter((u) => u.verificationStatus === "rejected" && u.status === "active").map((u) => u.id).slice(0, 5);
     return {
       chartData: sortedChartData,
       topSellers,
-      topProducts
+      topProducts,
+      summary: { periodRevenue, periodTransactions, periodNewUsers, periodNewListings, avgOrderValue },
+      suspiciousUserIds
     };
   }),
   // Listing Search for Admin

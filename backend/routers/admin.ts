@@ -144,63 +144,78 @@ export const adminRouter = router({
     };
   }),
 
-  // Advanced Analytics
+  // Advanced Analytics — supports both preset timeframe AND custom date range
   getAdvancedAnalytics: adminProcedure
-    .input(z.object({ timeframe: z.enum(["daily", "weekly", "bi_weekly", "monthly", "quarterly", "half_year", "yearly"]).default("monthly") }))
+    .input(z.object({
+      timeframe: z.enum(["daily", "weekly", "bi_weekly", "monthly", "quarterly", "half_year", "yearly", "custom"]).default("monthly"),
+      startDate: z.string().optional(), // ISO date string for custom range
+      endDate: z.string().optional(),   // ISO date string for custom range
+    }))
     .query(async ({ input }) => {
       const db = await getDb();
-      
+
       const allUsers = await db.select().from(users);
       const allListings = await db.select().from(listings);
       const allTransactions = await db.select().from(transactions).where(eq(transactions.status, "completed"));
 
-      // Date logic based on timeframe (approximate for simplicity of aggregation)
       const now = new Date();
-      let startDate = new Date();
-      
-      switch (input.timeframe) {
-        case "daily": startDate.setDate(now.getDate() - 30); break; // last 30 days
-        case "weekly": startDate.setDate(now.getDate() - 90); break; // last 12 weeks
-        case "bi_weekly": startDate.setDate(now.getDate() - 180); break;
-        case "monthly": startDate.setMonth(now.getMonth() - 12); break; // last 12 months
-        case "quarterly": startDate.setFullYear(now.getFullYear() - 3); break;
-        case "half_year": startDate.setFullYear(now.getFullYear() - 5); break;
-        case "yearly": startDate.setFullYear(now.getFullYear() - 10); break;
+      let rangeStart = new Date();
+      let rangeEnd = now;
+
+      if (input.timeframe === "custom" && input.startDate && input.endDate) {
+        rangeStart = new Date(input.startDate);
+        rangeEnd = new Date(input.endDate);
+        rangeEnd.setHours(23, 59, 59, 999);
+      } else {
+        switch (input.timeframe) {
+          case "daily":      rangeStart.setDate(now.getDate() - 30); break;
+          case "weekly":     rangeStart.setDate(now.getDate() - 90); break;
+          case "bi_weekly":  rangeStart.setDate(now.getDate() - 180); break;
+          case "monthly":    rangeStart.setMonth(now.getMonth() - 12); break;
+          case "quarterly":  rangeStart.setFullYear(now.getFullYear() - 3); break;
+          case "half_year":  rangeStart.setFullYear(now.getFullYear() - 5); break;
+          case "yearly":     rangeStart.setFullYear(now.getFullYear() - 10); break;
+        }
       }
 
-      // Grouping helper
+      const diffDays = Math.ceil((rangeEnd.getTime() - rangeStart.getTime()) / 86400000);
+
       const getGroupKey = (date: Date) => {
-        if (input.timeframe === "daily") return date.toISOString().split("T")[0];
-        if (input.timeframe === "weekly") {
+        if (diffDays <= 60 || input.timeframe === "daily") return date.toISOString().split("T")[0];
+        if (diffDays <= 180 || input.timeframe === "weekly") {
           const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
           const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
           return `${date.getFullYear()}-W${Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7)}`;
         }
-        if (input.timeframe === "monthly") return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         if (input.timeframe === "yearly") return `${date.getFullYear()}`;
-        // Fallback for others
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       };
 
       const chartData: Record<string, { revenue: number; newUsers: number; newListings: number }> = {};
 
       allTransactions.forEach(t => {
-        if (!t.createdAt || new Date(t.createdAt) < startDate) return;
-        const key = getGroupKey(new Date(t.createdAt));
+        if (!t.createdAt) return;
+        const d = new Date(t.createdAt);
+        if (d < rangeStart || d > rangeEnd) return;
+        const key = getGroupKey(d);
         if (!chartData[key]) chartData[key] = { revenue: 0, newUsers: 0, newListings: 0 };
         chartData[key].revenue += Number(t.amount);
       });
 
       allUsers.forEach(u => {
-        if (!u.createdAt || new Date(u.createdAt) < startDate) return;
-        const key = getGroupKey(new Date(u.createdAt));
+        if (!u.createdAt) return;
+        const d = new Date(u.createdAt);
+        if (d < rangeStart || d > rangeEnd) return;
+        const key = getGroupKey(d);
         if (!chartData[key]) chartData[key] = { revenue: 0, newUsers: 0, newListings: 0 };
         chartData[key].newUsers += 1;
       });
 
       allListings.forEach(l => {
-        if (!l.createdAt || new Date(l.createdAt) < startDate) return;
-        const key = getGroupKey(new Date(l.createdAt));
+        if (!l.createdAt) return;
+        const d = new Date(l.createdAt);
+        if (d < rangeStart || d > rangeEnd) return;
+        const key = getGroupKey(d);
         if (!chartData[key]) chartData[key] = { revenue: 0, newUsers: 0, newListings: 0 };
         chartData[key].newListings += 1;
       });
@@ -210,42 +225,75 @@ export const adminRouter = router({
         ...chartData[key]
       }));
 
-      // Top Sellers
+      // Summary stats for the period
+      const periodRevenue = allTransactions
+        .filter(t => t.createdAt && new Date(t.createdAt) >= rangeStart && new Date(t.createdAt) <= rangeEnd)
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      const periodTransactions = allTransactions.filter(t => t.createdAt && new Date(t.createdAt) >= rangeStart && new Date(t.createdAt) <= rangeEnd).length;
+      const periodNewUsers = allUsers.filter(u => u.createdAt && new Date(u.createdAt) >= rangeStart && new Date(u.createdAt) <= rangeEnd).length;
+      const periodNewListings = allListings.filter(l => l.createdAt && new Date(l.createdAt) >= rangeStart && new Date(l.createdAt) <= rangeEnd).length;
+      const avgOrderValue = periodTransactions > 0 ? Math.round(periodRevenue / periodTransactions) : 0;
+
+      // Category breakdown
+      const categoryBreakdown: Record<string, number> = {};
+      allListings.forEach(l => {
+        if (!l.createdAt) return;
+        const d = new Date(l.createdAt);
+        if (d < rangeStart || d > rangeEnd) return;
+        const catId = String(l.categoryId);
+        categoryBreakdown[catId] = (categoryBreakdown[catId] || 0) + 1;
+      });
+
+      // Top Sellers (within range)
       const sellerStats: Record<number, { revenue: number, sales: number }> = {};
       allTransactions.forEach(t => {
+        if (!t.createdAt) return;
+        const d = new Date(t.createdAt);
+        if (d < rangeStart || d > rangeEnd) return;
         if (t.sellerId) {
           if (!sellerStats[t.sellerId]) sellerStats[t.sellerId] = { revenue: 0, sales: 0 };
           sellerStats[t.sellerId].revenue += Number(t.amount);
           sellerStats[t.sellerId].sales += 1;
         }
       });
-      const topSellersIds = Object.keys(sellerStats).sort((a, b) => sellerStats[Number(b)].revenue - sellerStats[Number(a)].revenue).slice(0, 5).map(Number);
+      const topSellersIds = Object.keys(sellerStats).sort((a, b) => sellerStats[Number(b)].revenue - sellerStats[Number(a)].revenue).slice(0, 10).map(Number);
       const topSellers = allUsers.filter(u => topSellersIds.includes(u.id)).map(u => ({
         ...u,
-        revenue: sellerStats[u.id].revenue,
-        sales: sellerStats[u.id].sales
+        revenue: sellerStats[u.id]?.revenue ?? 0,
+        sales: sellerStats[u.id]?.sales ?? 0
       })).sort((a, b) => b.revenue - a.revenue);
 
-      // Top Products
+      // Top Products (within range)
       const productStats: Record<number, { revenue: number, sales: number }> = {};
       allTransactions.forEach(t => {
+        if (!t.createdAt) return;
+        const d = new Date(t.createdAt);
+        if (d < rangeStart || d > rangeEnd) return;
         if (t.listingId) {
           if (!productStats[t.listingId]) productStats[t.listingId] = { revenue: 0, sales: 0 };
           productStats[t.listingId].revenue += Number(t.amount);
           productStats[t.listingId].sales += 1;
         }
       });
-      const topProductIds = Object.keys(productStats).sort((a, b) => productStats[Number(b)].revenue - productStats[Number(a)].revenue).slice(0, 5).map(Number);
+      const topProductIds = Object.keys(productStats).sort((a, b) => productStats[Number(b)].revenue - productStats[Number(a)].revenue).slice(0, 10).map(Number);
       const topProducts = allListings.filter(l => topProductIds.includes(l.id)).map(l => ({
         ...l,
-        revenue: productStats[l.id].revenue,
-        sales: productStats[l.id].sales
+        revenue: productStats[l.id]?.revenue ?? 0,
+        sales: productStats[l.id]?.sales ?? 0
       })).sort((a, b) => b.revenue - a.revenue);
+
+      // Recent suspicious activity — users with no listings but many failed verifications
+      const suspiciousUserIds = allUsers
+        .filter(u => u.verificationStatus === "rejected" && u.status === "active")
+        .map(u => u.id)
+        .slice(0, 5);
 
       return {
         chartData: sortedChartData,
         topSellers,
-        topProducts
+        topProducts,
+        summary: { periodRevenue, periodTransactions, periodNewUsers, periodNewListings, avgOrderValue },
+        suspiciousUserIds,
       };
     }),
 

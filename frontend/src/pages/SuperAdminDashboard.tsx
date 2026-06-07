@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../_core/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { trpc } from "@/lib/trpc";
@@ -16,11 +16,13 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
-  Flag, UserX, UserCheck, Zap, Eye,
+  Flag, UserX, UserCheck, Zap, Eye, Activity,
   TrendingDown, TrendingUp, History, PieChart, Layers, Download,
   Shield, Users, Package, DollarSign, BarChart3, FileDown,
   Loader2, CheckCircle2, XCircle, AlertCircle, Key, Lock, Unlock, Settings2,
-  FileText, ChevronRight, Mail, Phone, MapPin, Briefcase, ShieldCheck, ShieldAlert, ArrowLeft, RefreshCw, Paperclip, X, Truck, Search
+  FileText, ChevronRight, Mail, Phone, MapPin, Briefcase, ShieldCheck, ShieldAlert,
+  ArrowLeft, RefreshCw, Paperclip, X, Truck, Search, CalendarDays, ChevronLeft,
+  ChevronDown, Bell, LogOut, Menu, Home, LayoutDashboard, ChevronUp
 } from "lucide-react";
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -28,6 +30,9 @@ import {
 } from "recharts";
 import { Megaphone, Crown, Rocket, Sparkles, Star, Trash2, Calendar, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DayPicker, DateRange } from "react-day-picker";
+import { format, subDays, subMonths } from "date-fns";
+import "react-day-picker/style.css";
 
 type UserRole = "user" | "seller" | "csr" | "sub_moderator" | "moderator" | "admin" | "super_admin";
 const ROOT_OWNER_ID = 1;
@@ -42,8 +47,23 @@ export default function SuperAdminDashboard() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Advanced Analytics State
-  const [timeframe, setTimeframe] = useState<"daily" | "weekly" | "bi_weekly" | "monthly" | "quarterly" | "half_year" | "yearly">("monthly");
-  
+  const [timeframe, setTimeframe] = useState<"daily" | "weekly" | "bi_weekly" | "monthly" | "quarterly" | "half_year" | "yearly" | "custom">("monthly");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Close calendar on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setCalendarOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   // Search Ads State
   const [listingSearchQuery, setListingSearchQuery] = useState("");
   const { data: searchResults, isLoading: searchLoading } = trpc.admin.searchListingsAdmin.useQuery(
@@ -150,7 +170,11 @@ export default function SuperAdminDashboard() {
   const { data: flaggedData, isLoading: flaggedLoading } = trpc.admin.getFlaggedListings.useQuery({ page: 1, limit: 20 });
   const { data: financialData, isLoading: finLoading } = trpc.admin.getFinancialStats.useQuery();
   const { data: advancedFinance, isLoading: advFinLoading } = trpc.admin.getAdvancedFinancials.useQuery({});
-  const { data: advancedAnalytics, isLoading: advAnalyticsLoading } = trpc.admin.getAdvancedAnalytics.useQuery({ timeframe });
+  const { data: advancedAnalytics, isLoading: advAnalyticsLoading } = trpc.admin.getAdvancedAnalytics.useQuery({
+    timeframe,
+    startDate: timeframe === "custom" && dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+    endDate: timeframe === "custom" && dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+  });
   const { data: pendingVerifications, isLoading: verLoading } = trpc.admin.getPendingVerifications.useQuery({ page: 1, limit: 20 });
   const { data: allVerifications } = trpc.admin.getAllVerifications.useQuery({ page: 1, limit: 50 });
   const { data: selectedUserProfile, isLoading: profileLoading } = trpc.admin.getUserProfile.useQuery(
@@ -517,71 +541,147 @@ export default function SuperAdminDashboard() {
     banned: "text-red-600 border-red-200 bg-red-50",
   };
 
+  // Sidebar nav items
+  const navItems = [
+    { value: "overview", label: "Overview", icon: BarChart3, color: "text-violet-400" },
+    { value: "users", label: "Users", icon: Users, color: "text-blue-400" },
+    { value: "verifications", label: "Verifications", icon: Shield, color: "text-emerald-400", badge: (pendingVerifications as any)?.total },
+    { value: "profiles", label: "Profiles & Docs", icon: FileText, color: "text-sky-400" },
+    { value: "flagged", label: "Content Mod", icon: Flag, color: "text-red-400" },
+    { value: "support_desk", label: "Support Desk", icon: Mail, color: "text-orange-400" },
+    { value: "complaints_inbox", label: "Complaints", icon: AlertCircle, color: "text-pink-400" },
+    { value: "job_manager", label: "Careers", icon: Briefcase, color: "text-indigo-400" },
+    { value: "brand_settings", label: "Brand Settings", icon: Settings2, color: "text-teal-400" },
+    ...(user.role === "admin" || user.role === "super_admin" ? [{ value: "sponsored", label: "Sponsored Ads", icon: Megaphone, color: "text-yellow-400" }] : []),
+    ...(user.role === "super_admin" ? [
+      { value: "search_ads", label: "Search Ads", icon: Search, color: "text-cyan-400" },
+      { value: "finance", label: "Finance Pro", icon: DollarSign, color: "text-green-400" },
+      { value: "payments", label: "Payment & Fees", icon: Layers, color: "text-lime-400" },
+      { value: "logistics", label: "Logistics", icon: Truck, color: "text-amber-400" },
+      { value: "rbac", label: "Permissions", icon: Key, color: "text-purple-400" },
+    ] : []),
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-              <Shield className="w-6 h-6 text-green-600" />
-              Sasto Staff Admin Console
-            </h1>
-            <p className="text-gray-500 text-sm mt-1">
-              Logged in as <span className="font-semibold text-gray-700">{user.name}</span> ({user.email})
-            </p>
+    <div className="min-h-screen bg-slate-950 flex" style={{ fontFamily: "'Inter', sans-serif" }}>
+      {/* ─── SIDEBAR ─── */}
+      <aside className={`${sidebarOpen ? "w-64" : "w-16"} transition-all duration-300 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 z-30 sticky top-0 h-screen overflow-hidden`}>
+        {/* Logo */}
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between h-16 shrink-0">
+          {sidebarOpen && (
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-black text-white text-sm tracking-tight">Sasto Admin</span>
+            </div>
+          )}
+          <button onClick={() => setSidebarOpen(v => !v)} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition">
+            <Menu className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+          {navItems.map(item => {
+            const Icon = item.icon;
+            const active = selectedTab === item.value;
+            return (
+              <button
+                key={item.value}
+                onClick={() => setSelectedTab(item.value)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all group ${
+                  active
+                    ? "bg-slate-800 text-white shadow-inner"
+                    : "text-slate-400 hover:bg-slate-800/60 hover:text-white"
+                }`}
+              >
+                <Icon className={`w-4 h-4 shrink-0 ${active ? item.color : "group-hover:text-white"}`} />
+                {sidebarOpen && (
+                  <>
+                    <span className="text-xs font-semibold flex-1">{item.label}</span>
+                    {(item as any).badge > 0 && (
+                      <span className="min-w-[20px] h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
+                        {(item as any).badge}
+                      </span>
+                    )}
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* User Footer */}
+        {sidebarOpen && (
+          <div className="p-3 border-t border-slate-800 shrink-0">
+            <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-slate-800/50">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center font-bold text-white text-xs shrink-0">
+                {user.name?.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-white truncate">{user.name}</p>
+                <p className="text-[10px] text-slate-400 truncate">{user.role?.replace("_"," ")}</p>
+              </div>
+            </div>
           </div>
-          <Badge className="bg-green-600 text-white capitalize">{user.role?.replace("_", " ")}</Badge>
-        </div>
+        )}
+      </aside>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {[
-            { label: "Total Users", value: analyticsData?.totalUsers ?? "—", icon: Users, color: "text-blue-600" },
-            { label: "Active Listings", value: analyticsData?.activeListings ?? "—", icon: Package, color: "text-green-600" },
-            { label: "Featured Ads", value: financialData?.featuredListings ?? "—", icon: Zap, color: "text-yellow-500" },
-            { label: "Promo Revenue", value: financialData ? `NPR ${financialData.promotionRevenue.toLocaleString()}` : "—", icon: DollarSign, color: "text-purple-600" },
-          ].map((stat) => (
-            <Card key={stat.label} className="border-none shadow-md">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center ${stat.color}`}>
-                  <stat.icon className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{stat.label}</p>
-                  <p className="text-xl font-black text-gray-900">{stat.value}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Tabs */}
-        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          <TabsList className="bg-white border shadow-sm rounded-xl p-1 w-full flex flex-wrap gap-1 md:inline-flex h-auto">
-            <TabsTrigger value="overview" className="flex items-center gap-1.5 text-xs"><BarChart3 className="w-3.5 h-3.5" />Overview</TabsTrigger>
-            <TabsTrigger value="support_desk" className="flex items-center gap-1.5 text-xs"><Mail className="w-3.5 h-3.5" />Support Desk</TabsTrigger>
-            <TabsTrigger value="complaints_inbox" className="flex items-center gap-1.5 text-xs"><Flag className="w-3.5 h-3.5" />Complaints</TabsTrigger>
-            <TabsTrigger value="job_manager" className="flex items-center gap-1.5 text-xs"><Briefcase className="w-3.5 h-3.5" />Careers</TabsTrigger>
-            <TabsTrigger value="brand_settings" className="flex items-center gap-1.5 text-xs"><Settings2 className="w-3.5 h-3.5" />Brand Settings</TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-1.5 text-xs"><Users className="w-3.5 h-3.5" />Users</TabsTrigger>
-            <TabsTrigger value="profiles" className="flex items-center gap-1.5 text-xs"><FileText className="w-3.5 h-3.5" />Profiles & Docs</TabsTrigger>
-            <TabsTrigger value="verifications" className="flex items-center gap-1.5 text-xs"><Shield className="w-3.5 h-3.5" />Verifications</TabsTrigger>
-            <TabsTrigger value="flagged" className="flex items-center gap-1.5 text-xs"><Flag className="w-3.5 h-3.5" />Content Mod</TabsTrigger>
-            {(user.role === "admin" || user.role === "super_admin") && (
-              <TabsTrigger value="sponsored" className="flex items-center gap-1.5 text-xs"><Megaphone className="w-3.5 h-3.5" />Sponsored Ads</TabsTrigger>
+      {/* ─── MAIN CONTENT ─── */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Bar */}
+        <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-20 shrink-0">
+          <div>
+            <h1 className="text-sm font-bold text-white capitalize">{navItems.find(n => n.value === selectedTab)?.label ?? "Dashboard"}</h1>
+            <p className="text-[10px] text-slate-400">Sasto Staff Admin Console</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Pending verification alert */}
+            {(pendingVerifications as any)?.total > 0 && (
+              <button onClick={() => setSelectedTab("verifications")} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400 text-[11px] font-bold hover:bg-amber-500/20 transition">
+                <Bell className="w-3.5 h-3.5" />
+                {(pendingVerifications as any).total} pending
+              </button>
             )}
-            {user.role === "super_admin" && (
-              <>
-                <TabsTrigger value="search_ads" className="flex items-center gap-1.5 text-xs"><Search className="w-3.5 h-3.5" />Search Ads</TabsTrigger>
-                <TabsTrigger value="finance" className="flex items-center gap-1.5 text-xs"><DollarSign className="w-3.5 h-3.5" />Finance Pro</TabsTrigger>
-                <TabsTrigger value="payments" className="flex items-center gap-1.5 text-xs"><DollarSign className="w-3.5 h-3.5" />Payment & Fees</TabsTrigger>
-                <TabsTrigger value="logistics" className="flex items-center gap-1.5 text-xs"><Truck className="w-3.5 h-3.5" />Logistics Partners</TabsTrigger>
-                <TabsTrigger value="rbac" className="flex items-center gap-1.5 text-xs"><Key className="w-3.5 h-3.5" />Permissions</TabsTrigger>
-              </>
-            )}
-          </TabsList>
+            <div className="flex gap-2">
+              {[
+                { label: "Users", value: analyticsData?.totalUsers ?? "—", color: "bg-blue-500/10 text-blue-300 border-blue-500/20" },
+                { label: "Active Ads", value: analyticsData?.activeListings ?? "—", color: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20" },
+                { label: "Rev", value: financialData ? `Rs.${financialData.promotionRevenue.toLocaleString()}` : "—", color: "bg-violet-500/10 text-violet-300 border-violet-500/20" },
+              ].map(s => (
+                <div key={s.label} className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold ${s.color}`}>
+                  <span className="text-slate-400 font-medium">{s.label}:</span> {s.value}
+                </div>
+              ))}
+            </div>
+            <a href="/" className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition">
+              <Home className="w-4 h-4" />
+            </a>
+          </div>
+        </header>
 
+        {/* Page Content */}
+        <main className="flex-1 overflow-auto p-6">
+          <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
+            {/* Hidden triggers so TabsContent still activates */}
+            <TabsList className="hidden">
+              <TabsTrigger value="overview">o</TabsTrigger>
+              <TabsTrigger value="users">u</TabsTrigger>
+              <TabsTrigger value="verifications">v</TabsTrigger>
+              <TabsTrigger value="profiles">p</TabsTrigger>
+              <TabsTrigger value="flagged">f</TabsTrigger>
+              <TabsTrigger value="support_desk">s</TabsTrigger>
+              <TabsTrigger value="complaints_inbox">c</TabsTrigger>
+              <TabsTrigger value="job_manager">j</TabsTrigger>
+              <TabsTrigger value="brand_settings">b</TabsTrigger>
+              <TabsTrigger value="sponsored">sp</TabsTrigger>
+              <TabsTrigger value="search_ads">sa</TabsTrigger>
+              <TabsTrigger value="finance">fin</TabsTrigger>
+              <TabsTrigger value="payments">pay</TabsTrigger>
+              <TabsTrigger value="logistics">log</TabsTrigger>
+              <TabsTrigger value="rbac">rbac</TabsTrigger>
+            </TabsList>
           {/* SEARCH ADS */}
           <TabsContent value="search_ads" className="space-y-6">
             <Card className="border-none shadow-md">
@@ -653,9 +753,42 @@ export default function SuperAdminDashboard() {
                 <h2 className="text-2xl font-black text-gray-900 tracking-tight">Platform Analytics</h2>
                 <p className="text-gray-500 text-sm">Monitor your marketplace growth and revenue</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                {timeframe === "custom" && (
+                  <div className="relative" ref={calendarRef}>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setCalendarOpen(!calendarOpen)}
+                      className="bg-white justify-start text-left font-normal border-gray-200"
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4 text-gray-500" />
+                      {dateRange?.from ? (
+                        dateRange.to ? (
+                          <>
+                            {format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}
+                          </>
+                        ) : (
+                          format(dateRange.from, "LLL dd, y")
+                        )
+                      ) : (
+                        <span>Pick a date range</span>
+                      )}
+                    </Button>
+                    {calendarOpen && (
+                      <div className="absolute top-12 right-0 z-50 bg-white border border-gray-100 shadow-xl rounded-xl p-3">
+                        <DayPicker
+                          mode="range"
+                          selected={dateRange}
+                          onSelect={(range) => setDateRange(range)}
+                          numberOfMonths={2}
+                          className="bg-white p-2 rounded-lg"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
                 <Select value={timeframe} onValueChange={(val: any) => setTimeframe(val)}>
-                  <SelectTrigger className="w-36 bg-white shadow-sm h-10 border-gray-200">
+                  <SelectTrigger className="w-36 bg-white shadow-sm h-10 border-gray-200 font-medium">
                     <SelectValue placeholder="Select timeframe" />
                   </SelectTrigger>
                   <SelectContent>
@@ -666,6 +799,7 @@ export default function SuperAdminDashboard() {
                     <SelectItem value="quarterly">Quarterly</SelectItem>
                     <SelectItem value="half_year">Half Year</SelectItem>
                     <SelectItem value="yearly">Yearly</SelectItem>
+                    <SelectItem value="custom" className="text-indigo-600 font-semibold">Custom Range</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -673,49 +807,78 @@ export default function SuperAdminDashboard() {
 
             {/* Top Metric Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="border-none shadow-md bg-gradient-to-br from-blue-50 to-white overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                  <Users className="w-16 h-16 text-blue-600" />
+              <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 bg-white overflow-hidden relative group">
+                <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-10 group-hover:scale-110 transition-all">
+                  <Users className="w-20 h-20 text-blue-600" />
                 </div>
-                <CardContent className="p-6 relative z-10">
-                  <p className="text-sm font-bold text-blue-600 mb-1 uppercase tracking-wider">Total Users</p>
-                  <p className="text-3xl font-black text-gray-900">{analyticsData?.totalUsers ?? "—"}</p>
+                <CardContent className="p-6 relative z-10 flex flex-col justify-between h-full">
+                  <div className="flex justify-between items-start mb-4">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">New Users</p>
+                    <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+                      <Users className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-black text-gray-900">{advancedAnalytics?.summary?.newUsers ?? 0}</p>
+                    <p className="text-xs font-medium text-gray-500 mt-1">in selected period</p>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-none shadow-md bg-gradient-to-br from-green-50 to-white overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                  <Package className="w-16 h-16 text-green-600" />
+              <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 bg-white overflow-hidden relative group">
+                <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-10 group-hover:scale-110 transition-all">
+                  <Package className="w-20 h-20 text-emerald-600" />
                 </div>
-                <CardContent className="p-6 relative z-10">
-                  <p className="text-sm font-bold text-green-600 mb-1 uppercase tracking-wider">Active Ads</p>
-                  <p className="text-3xl font-black text-gray-900">{analyticsData?.activeListings ?? "—"}</p>
+                <CardContent className="p-6 relative z-10 flex flex-col justify-between h-full">
+                  <div className="flex justify-between items-start mb-4">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">New Ads</p>
+                    <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+                      <Package className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-black text-gray-900">{advancedAnalytics?.summary?.newListings ?? 0}</p>
+                    <p className="text-xs font-medium text-gray-500 mt-1">in selected period</p>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-none shadow-md bg-gradient-to-br from-purple-50 to-white overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                  <DollarSign className="w-16 h-16 text-purple-600" />
+              <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 bg-white overflow-hidden relative group">
+                <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-10 group-hover:scale-110 transition-all">
+                  <DollarSign className="w-20 h-20 text-violet-600" />
                 </div>
-                <CardContent className="p-6 relative z-10">
-                  <p className="text-sm font-bold text-purple-600 mb-1 uppercase tracking-wider">Promo Rev</p>
-                  <p className="text-3xl font-black text-gray-900">
-                    <span className="text-xl">Rs.</span>
-                    {financialData ? financialData.promotionRevenue.toLocaleString() : "—"}
-                  </p>
+                <CardContent className="p-6 relative z-10 flex flex-col justify-between h-full">
+                  <div className="flex justify-between items-start mb-4">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Period Rev</p>
+                    <div className="p-2 rounded-lg bg-violet-50 text-violet-600">
+                      <DollarSign className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-black text-gray-900 flex items-baseline gap-1">
+                      <span className="text-sm text-gray-400 font-medium">Rs.</span>
+                      {advancedAnalytics?.summary?.periodRevenue?.toLocaleString() ?? 0}
+                    </p>
+                    <p className="text-xs font-medium text-gray-500 mt-1">in selected period</p>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-none shadow-md bg-gradient-to-br from-amber-50 to-white overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                  <TrendingUp className="w-16 h-16 text-amber-600" />
+              <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 bg-white overflow-hidden relative group">
+                <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-10 group-hover:scale-110 transition-all">
+                  <CheckCircle2 className="w-20 h-20 text-amber-600" />
                 </div>
-                <CardContent className="p-6 relative z-10">
-                  <p className="text-sm font-bold text-amber-600 mb-1 uppercase tracking-wider">Total Value</p>
-                  <p className="text-3xl font-black text-gray-900">
-                    <span className="text-xl">Rs.</span>
-                    {financialData ? financialData.totalValue.toLocaleString() : "—"}
-                  </p>
+                <CardContent className="p-6 relative z-10 flex flex-col justify-between h-full">
+                  <div className="flex justify-between items-start mb-4">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Completed Sales</p>
+                    <div className="p-2 rounded-lg bg-amber-50 text-amber-600">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-black text-gray-900">{advancedAnalytics?.summary?.completedOrders ?? 0}</p>
+                    <p className="text-xs font-medium text-gray-500 mt-1">in selected period</p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -2727,6 +2890,7 @@ export default function SuperAdminDashboard() {
             </DialogContent>
           </Dialog>
         </Tabs>
+        </main>
       </div>
 
       {/* Image Lightbox Modal */}
@@ -2743,7 +2907,6 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
