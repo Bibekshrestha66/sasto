@@ -882,20 +882,49 @@ export default function SuperAdminDashboard() {
                                       </Badge>
                                     )}
                                   </div>
-                                  <div className="p-5 grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    {Object.entries(docData).map(([key, val]: [string, any]) => (
-                                      <div key={key} className="bg-gray-50 p-3 rounded-xl">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{key.replace(/([A-Z])/g, " $1")}</p>
-                                        {typeof val === "string" && (val.startsWith("http") || val.startsWith("/")) ? (
-                                          <a href={val} target="_blank" rel="noopener noreferrer"
-                                            className="text-blue-600 text-xs font-bold flex items-center gap-1 hover:underline">
-                                            <Eye className="w-3 h-3" /> View Document
-                                          </a>
-                                        ) : (
-                                          <p className="font-bold text-gray-900 text-sm truncate">{String(val)}</p>
-                                        )}
-                                      </div>
-                                    ))}
+                                  <div className="p-5 space-y-4">
+                                    {/* Text fields */}
+                                    {(() => {
+                                      const textFields = Object.entries(docData).filter(([, v]: [string, any]) =>
+                                        !(typeof v === 'string' && (v.startsWith('data:image') || v.startsWith('http') || v.startsWith('/')))
+                                      );
+                                      const imageFields = Object.entries(docData).filter(([, v]: [string, any]) =>
+                                        typeof v === 'string' && (v.startsWith('data:image') || v.startsWith('http') || v.startsWith('/'))
+                                      );
+                                      return (
+                                        <>
+                                          {textFields.length > 0 && (
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                              {textFields.map(([key, val]: [string, any]) => (
+                                                <div key={key} className="bg-gray-50 p-3 rounded-xl">
+                                                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{key.replace(/([A-Z])/g, ' $1')}</p>
+                                                  <p className="font-bold text-gray-900 text-sm break-words">{String(val)}</p>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )}
+                                          {imageFields.length > 0 && (
+                                            <div className={`grid gap-3 ${imageFields.length === 1 ? 'grid-cols-1 max-w-xs' : imageFields.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                                              {imageFields.map(([key, val]: [string, any]) => (
+                                                <div key={key} className="space-y-1.5">
+                                                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{key.replace(/([A-Z])/g, ' $1')}</p>
+                                                  <a href={val as string} target="_blank" rel="noreferrer"
+                                                    className="block w-full rounded-xl overflow-hidden border-2 border-slate-200 hover:border-blue-500 transition-all shadow-sm hover:shadow-lg group relative bg-slate-100">
+                                                    <img src={val as string} alt={key} className="w-full h-40 object-cover"
+                                                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center rounded-xl">
+                                                      <div className="bg-white/90 px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all flex items-center gap-1.5 text-xs font-bold text-gray-900">
+                                                        <Eye className="w-3.5 h-3.5" /> View Full
+                                                      </div>
+                                                    </div>
+                                                  </a>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
                                   </div>
                                   {v.adminNotes && (
                                     <div className="px-5 pb-4">
@@ -934,38 +963,80 @@ export default function SuperAdminDashboard() {
                   ) : (
                     <div className="space-y-4">
                       {pendingVerifications?.submissions.map((sub: any) => (
-                        <div key={sub.id} className="border rounded-xl p-4 bg-white space-y-4">
-                          <div className="flex items-start justify-between">
+                        <div key={sub.id} className="border rounded-xl bg-white overflow-hidden shadow-sm">
+                          {/* Header */}
+                          <div className="flex items-start justify-between p-4 border-b bg-gray-50">
                             <div>
                               <p className="font-bold text-gray-900">{sub.userName}</p>
                               <p className="text-xs text-gray-500">{sub.userEmail}</p>
-                              <Badge className="mt-2 uppercase text-[10px]">{sub.type}</Badge>
+                              <Badge className={`mt-2 uppercase text-[10px] ${sub.type === 'kyb' ? 'bg-blue-600' : 'bg-purple-600'} text-white border-none`}>{sub.type}</Badge>
                             </div>
-                            <div className="flex gap-2">
-                              <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8"
-                                onClick={() => reviewVerificationMutation.mutate({ submissionId: sub.id, status: "approved" })}>
-                                <UserCheck className="w-3.5 h-3.5 mr-1" />Approve
-                              </Button>
-                              <Button size="sm" variant="destructive" className="h-8"
-                                onClick={() => reviewVerificationMutation.mutate({ submissionId: sub.id, status: "rejected", adminNotes: "Invalid documents" })}>
-                                <XCircle className="w-3.5 h-3.5 mr-1" />Reject
-                              </Button>
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="flex gap-2">
+                                <Button size="sm" className="bg-green-600 hover:bg-green-700 h-9 px-4"
+                                  onClick={() => reviewVerificationMutation.mutate({ submissionId: sub.id, status: "approved" })}>
+                                  <UserCheck className="w-3.5 h-3.5 mr-1.5" />Approve
+                                </Button>
+                                <Button size="sm" variant="destructive" className="h-9 px-4"
+                                  onClick={() => reviewVerificationMutation.mutate({ submissionId: sub.id, status: "rejected", adminNotes: "Invalid documents" })}>
+                                  <XCircle className="w-3.5 h-3.5 mr-1.5" />Reject
+                                </Button>
+                              </div>
+                              <p className="text-[10px] text-gray-400">Submitted {new Date(sub.createdAt || Date.now()).toLocaleDateString()}</p>
                             </div>
                           </div>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-                            {Object.entries(sub.data || {}).map(([key, value]: [string, any]) => (
-                              <div key={key} className="space-y-1">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase">{key.replace(/([A-Z])/g, ' $1')}</p>
-                                {typeof value === 'string' && value.startsWith('http') ? (
-                                  <a href={value} target="_blank" rel="noreferrer" className="block w-full h-20 rounded-lg overflow-hidden border hover:border-green-600 transition">
-                                    <img src={value} alt="" className="w-full h-full object-cover" />
-                                  </a>
-                                ) : (
-                                  <p className="text-xs font-medium text-gray-700 truncate">{value}</p>
-                                )}
-                              </div>
-                            ))}
+
+                          {/* Documents Grid */}
+                          <div className="p-4">
+                            {/* Image documents (selfie, ID front/back) */}
+                            {(() => {
+                              const imageFields = Object.entries(sub.data || {}).filter(([, v]: [string, any]) =>
+                                typeof v === 'string' && (v.startsWith('data:image') || v.startsWith('http') || v.startsWith('/'))
+                              );
+                              const textFields = Object.entries(sub.data || {}).filter(([, v]: [string, any]) =>
+                                !(typeof v === 'string' && (v.startsWith('data:image') || v.startsWith('http') || v.startsWith('/')))
+                              );
+                              return (
+                                <>
+                                  {/* Text info */}
+                                  {textFields.length > 0 && (
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                      {textFields.map(([key, value]: [string, any]) => (
+                                        <div key={key} className="bg-slate-50 rounded-xl p-3">
+                                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{key.replace(/([A-Z])/g, ' $1')}</p>
+                                          <p className="text-sm font-bold text-gray-900 break-words">{String(value)}</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Image documents */}
+                                  {imageFields.length > 0 && (
+                                    <div className={`grid gap-3 ${imageFields.length === 1 ? 'grid-cols-1 max-w-xs' : imageFields.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                                      {imageFields.map(([key, value]: [string, any]) => (
+                                        <div key={key} className="space-y-1.5">
+                                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{key.replace(/([A-Z])/g, ' $1')}</p>
+                                          <a href={value as string} target="_blank" rel="noreferrer"
+                                            className="block w-full rounded-xl overflow-hidden border-2 border-slate-200 hover:border-green-500 transition-all shadow-sm hover:shadow-lg group relative bg-slate-100">
+                                            <img
+                                              src={value as string}
+                                              alt={key}
+                                              className="w-full h-40 object-cover"
+                                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                            />
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center rounded-xl">
+                                              <div className="bg-white/90 px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all flex items-center gap-1.5 text-xs font-bold text-gray-900">
+                                                <Eye className="w-3.5 h-3.5" /> View Full
+                                              </div>
+                                            </div>
+                                          </a>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       ))}
