@@ -12,6 +12,26 @@ import { ClerkProvider } from "@clerk/clerk-react";
 console.log("[DEBUG] import.meta.env:", import.meta.env);
 console.log("[DEBUG] VITE_CLERK_PUBLISHABLE_KEY:", import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
 
+// Intercept and filter noisy third-party extension logs (like MetaMask)
+const originalWarn = console.warn;
+const originalError = console.error;
+
+console.warn = function (...args) {
+  const msg = typeof args[0] === 'string' ? args[0] : '';
+  if (msg.includes('ObjectMultiplex') || msg.includes('MaxListenersExceededWarning') || msg.includes('EventEmitter memory leak')) {
+    return; // Block known extension warnings
+  }
+  originalWarn.apply(console, args as any);
+};
+
+console.error = function (...args) {
+  const msg = typeof args[0] === 'string' ? args[0] : '';
+  if (msg.includes('ObjectMultiplex') || msg.includes('MaxListenersExceededWarning') || msg.includes('EventEmitter memory leak')) {
+    return; // Block known extension errors
+  }
+  originalError.apply(console, args as any);
+};
+
 const queryClient = new QueryClient();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
