@@ -7454,6 +7454,9 @@ restRouter.get("/analytics", async (req, res) => {
 async function createApp(options) {
   const { mode, httpServer } = options;
   const app2 = express2();
+  app2.set("trust proxy", 1);
+  app2.use("/socket.io", (req, res, next) => {
+  });
   app2.use(cors({
     origin: [
       "http://localhost:3000",

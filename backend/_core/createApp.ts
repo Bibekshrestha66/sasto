@@ -30,6 +30,12 @@ export type CreateAppResult = {
 export async function createApp(options: CreateAppOptions): Promise<CreateAppResult> {
   const { mode, httpServer } = options;
   const app = express();
+  app.set('trust proxy', 1);
+  
+  // Prevent Express from processing socket.io paths so it doesn't trigger 404 handlers while polling
+  app.use("/socket.io", (req, res, next) => {
+    // Socket.io handles this at the http server level. Stop Express middleware chain.
+  });
   app.use(cors({
     origin: [
       "http://localhost:3000",
