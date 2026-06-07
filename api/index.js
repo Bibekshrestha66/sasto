@@ -14,6 +14,1664 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
+// backend/_core/env.ts
+var ENV;
+var init_env = __esm({
+  "backend/_core/env.ts"() {
+    "use strict";
+    ENV = {
+      appId: process.env.VITE_APP_ID ?? "",
+      // Read from COOKIE_SECRET first, fall back to JWT_SECRET for backward compatibility
+      cookieSecret: process.env.COOKIE_SECRET || process.env.JWT_SECRET || "",
+      googleClientId: process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || "",
+      databaseUrl: process.env.DATABASE_URL ?? "",
+      oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
+      ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
+      isProduction: process.env.NODE_ENV === "production",
+      forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
+      forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? ""
+    };
+    if (process.env.NODE_ENV === "development") {
+      console.log("[ENV] Configuration loaded:");
+      console.log("[ENV] Google Client ID:", ENV.googleClientId ? "SET (" + ENV.googleClientId.substring(0, 20) + "...)" : "NOT SET");
+      console.log("[ENV] App ID:", ENV.appId);
+      console.log("[ENV] Cookie Secret:", ENV.cookieSecret ? "SET" : "NOT SET");
+    }
+  }
+});
+
+// backend/_core/debugLog.ts
+import fs from "fs";
+import path from "path";
+function writeDebugLog(payload) {
+  const line = JSON.stringify(payload) + "\n";
+  try {
+    fs.appendFileSync(LOG_PATH, line, { encoding: "utf8" });
+  } catch {
+  }
+  try {
+    const f = globalThis.fetch;
+    if (typeof f === "function") {
+      f(INGEST_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": SESSION_ID
+        },
+        body: JSON.stringify(payload)
+      }).catch(() => {
+      });
+    }
+  } catch {
+  }
+}
+var SESSION_ID, INGEST_URL, LOG_PATH;
+var init_debugLog = __esm({
+  "backend/_core/debugLog.ts"() {
+    "use strict";
+    SESSION_ID = "90368c";
+    INGEST_URL = "http://127.0.0.1:7884/ingest/4eb48921-d438-46ea-8ea8-0991e31d49ad";
+    LOG_PATH = path.resolve(process.cwd(), "debug-90368c.log");
+  }
+});
+
+// drizzle/schema.ts
+var schema_exports = {};
+__export(schema_exports, {
+  adAnalytics: () => adAnalytics,
+  adPayments: () => adPayments,
+  adminLogs: () => adminLogs,
+  adsensePlacements: () => adsensePlacements,
+  advertisers: () => advertisers,
+  auctions: () => auctions,
+  bids: () => bids,
+  bookings: () => bookings,
+  careers: () => careers,
+  cartItems: () => cartItems,
+  cartItemsRelations: () => cartItemsRelations,
+  carts: () => carts,
+  cartsRelations: () => cartsRelations,
+  categories: () => categories,
+  categoriesRelations: () => categoriesRelations,
+  companyConfigs: () => companyConfigs,
+  disputes: () => disputes,
+  emailLogs: () => emailLogs,
+  emailNotificationPreferences: () => emailNotificationPreferences,
+  emailQueue: () => emailQueue,
+  favorites: () => favorites,
+  flaggedListings: () => flaggedListings,
+  flaggedReviews: () => flaggedReviews,
+  listings: () => listings,
+  listingsRelations: () => listingsRelations,
+  logisticsPartners: () => logisticsPartners,
+  manualAds: () => manualAds,
+  messages: () => messages,
+  notifications: () => notifications,
+  paymentGateways: () => paymentGateways,
+  permissions: () => permissions,
+  promotionRequests: () => promotionRequests,
+  reports: () => reports,
+  returns: () => returns,
+  returnsRelations: () => returnsRelations,
+  reviewAnalytics: () => reviewAnalytics,
+  reviewHelpfulVotes: () => reviewHelpfulVotes,
+  reviews: () => reviews,
+  roleAuditLogs: () => roleAuditLogs,
+  rolePermissions: () => rolePermissions,
+  roles: () => roles,
+  sponsoredAdPricing: () => sponsoredAdPricing,
+  transactions: () => transactions,
+  transactionsRelations: () => transactionsRelations,
+  userRoles: () => userRoles,
+  users: () => users,
+  usersRelations: () => usersRelations,
+  verificationSubmissions: () => verificationSubmissions
+});
+import { pgTable, text, integer, real, boolean, timestamp, jsonb, serial } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+var users, categories, listings, auctions, bids, bookings, favorites, messages, reviews, notifications, disputes, adminLogs, roles, permissions, rolePermissions, userRoles, roleAuditLogs, advertisers, manualAds, adAnalytics, adsensePlacements, adPayments, sponsoredAdPricing, promotionRequests, emailNotificationPreferences, emailQueue, emailLogs, reviewHelpfulVotes, reviewAnalytics, flaggedReviews, flaggedListings, verificationSubmissions, transactions, carts, cartItems, logisticsPartners, usersRelations, listingsRelations, transactionsRelations, cartsRelations, cartItemsRelations, categoriesRelations, companyConfigs, paymentGateways, reports, careers, returns, returnsRelations;
+var init_schema = __esm({
+  "drizzle/schema.ts"() {
+    "use strict";
+    users = pgTable("users", {
+      /**
+       * Surrogate primary key. Auto-incremented numeric value managed by the database.
+       * Use this for relations between tables.
+       */
+      id: serial("id").primaryKey(),
+      /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
+      openId: text("openId").notNull().unique(),
+      name: text("name"),
+      email: text("email"),
+      phone: text("phone"),
+      location: text("location"),
+      bio: text("bio"),
+      avatar: text("avatar"),
+      loginMethod: text("loginMethod"),
+      password: text("password"),
+      role: text("role").default("user").notNull(),
+      status: text("status").default("active").notNull(),
+      verificationStatus: text("verificationStatus").default("unverified").notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+      lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+      lastLogin: timestamp("lastLogin"),
+      isVerified: boolean("isVerified").default(false).notNull(),
+      verificationLevel: text("verificationLevel").default("basic").notNull(),
+      resetToken: text("resetToken"),
+      resetTokenExpires: timestamp("resetTokenExpires"),
+      // Advanced business fields
+      businessName: text("businessName"),
+      businessLicense: text("businessLicense"),
+      experienceYears: integer("experienceYears"),
+      specialties: text("specialties"),
+      // Comma separated list of categories
+      socialLinks: text("socialLinks"),
+      // JSON string
+      bannerImage: text("bannerImage")
+    });
+    categories = pgTable("categories", {
+      id: serial("id").primaryKey(),
+      name: text("name").notNull(),
+      slug: text("slug").notNull().unique(),
+      description: text("description"),
+      icon: text("icon"),
+      parentId: integer("parentId"),
+      sector: text("sector").default("marketplace"),
+      // marketplace, auction, rental, all
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    listings = pgTable("listings", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
+      categoryId: integer("categoryId").notNull(),
+      title: text("title").notNull(),
+      description: text("description"),
+      type: text("type").notNull(),
+      price: real("price"),
+      images: jsonb("images"),
+      location: text("location"),
+      district: text("district"),
+      brand: text("brand"),
+      model: text("model"),
+      color: text("color"),
+      condition: text("condition"),
+      status: text("status").default("active"),
+      views: integer("views").default(0),
+      stock: integer("stock").default(1),
+      isFeatured: boolean("isFeatured").default(false),
+      featuredUntil: timestamp("featuredUntil"),
+      originalPrice: real("originalPrice"),
+      discount: integer("discount"),
+      videoUrl: text("videoUrl"),
+      length: real("length"),
+      // Logistics: Length in cm
+      width: real("width"),
+      // Logistics: Width in cm
+      height: real("height"),
+      // Logistics: Height in cm
+      weight: real("weight"),
+      // Logistics: Weight in kg
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+      expiresAt: timestamp("expiresAt")
+    });
+    auctions = pgTable("auctions", {
+      id: serial("id").primaryKey(),
+      listingId: integer("listingId").notNull(),
+      startingPrice: real("startingPrice").notNull(),
+      currentBid: real("currentBid"),
+      highestBidderId: integer("highestBidderId"),
+      startTime: timestamp("startTime").notNull(),
+      endTime: timestamp("endTime").notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    bids = pgTable("bids", {
+      id: serial("id").primaryKey(),
+      auctionId: integer("auctionId").notNull(),
+      bidderId: integer("bidderId").notNull(),
+      amount: real("amount").notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    bookings = pgTable("bookings", {
+      id: serial("id").primaryKey(),
+      listingId: integer("listingId").notNull(),
+      userId: integer("userId").notNull(),
+      startDate: timestamp("startDate").notNull(),
+      endDate: timestamp("endDate").notNull(),
+      totalPrice: real("totalPrice").notNull(),
+      status: text("status").default("pending"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    favorites = pgTable("favorites", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
+      listingId: integer("listingId").notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    messages = pgTable("messages", {
+      id: serial("id").primaryKey(),
+      senderId: integer("senderId").notNull(),
+      recipientId: integer("recipientId").notNull(),
+      listingId: integer("listingId"),
+      content: text("content").notNull(),
+      isRead: boolean("isRead").default(false),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      attachmentUrl: text("attachmentUrl"),
+      attachmentType: text("attachmentType")
+    });
+    reviews = pgTable("reviews", {
+      id: serial("id").primaryKey(),
+      fromUserId: integer("fromUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      toUserId: integer("toUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      listingId: integer("listingId").references(() => listings.id, { onDelete: "cascade" }),
+      transactionId: integer("transactionId"),
+      rating: integer("rating").notNull(),
+      title: text("title"),
+      comment: text("comment"),
+      isVerifiedPurchase: boolean("isVerifiedPurchase").default(false).notNull(),
+      helpfulCount: integer("helpfulCount").default(0).notNull(),
+      unhelpfulCount: integer("unhelpfulCount").default(0).notNull(),
+      status: text("status").default("approved").notNull(),
+      sellerResponse: text("sellerResponse"),
+      sellerResponseAt: timestamp("sellerResponseAt"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    notifications = pgTable("notifications", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull(),
+      type: text("type").notNull(),
+      title: text("title").notNull(),
+      content: text("content"),
+      relatedId: integer("relatedId"),
+      isRead: boolean("isRead").default(false),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    disputes = pgTable("disputes", {
+      id: serial("id").primaryKey(),
+      buyerId: integer("buyerId").notNull(),
+      sellerId: integer("sellerId").notNull(),
+      listingId: integer("listingId").notNull(),
+      title: text("title").notNull(),
+      description: text("description"),
+      status: text("status").default("open").notNull(),
+      resolution: text("resolution"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      resolvedAt: timestamp("resolvedAt"),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    adminLogs = pgTable("adminLogs", {
+      id: serial("id").primaryKey(),
+      adminId: integer("adminId").notNull(),
+      action: text("action").notNull(),
+      targetUserId: integer("targetUserId"),
+      targetListingId: integer("targetListingId"),
+      targetDisputeId: integer("targetDisputeId"),
+      details: text("details"),
+      timestamp: timestamp("timestamp").defaultNow().notNull()
+    });
+    roles = pgTable("roles", {
+      id: serial("id").primaryKey(),
+      name: text("name").notNull().unique(),
+      description: text("description"),
+      level: integer("level").notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    permissions = pgTable("permissions", {
+      id: serial("id").primaryKey(),
+      name: text("name").notNull().unique(),
+      description: text("description"),
+      category: text("category").notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    rolePermissions = pgTable("role_permissions", {
+      id: serial("id").primaryKey(),
+      roleId: integer("roleId").notNull().references(() => roles.id, { onDelete: "cascade" }),
+      permissionId: integer("permissionId").notNull().references(() => permissions.id, { onDelete: "cascade" }),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    userRoles = pgTable("user_roles", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      roleId: integer("roleId").notNull().references(() => roles.id, { onDelete: "cascade" }),
+      assignedBy: integer("assignedBy").references(() => users.id),
+      assignedAt: timestamp("assignedAt").defaultNow().notNull(),
+      expiresAt: timestamp("expiresAt")
+    });
+    roleAuditLogs = pgTable("role_audit_logs", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      action: text("action").notNull(),
+      targetUserId: integer("targetUserId").references(() => users.id, { onDelete: "set null" }),
+      details: text("details"),
+      ipAddress: text("ipAddress"),
+      userAgent: text("userAgent"),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    advertisers = pgTable("advertisers", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      businessName: text("businessName").notNull(),
+      businessUrl: text("businessUrl"),
+      contactEmail: text("contactEmail").notNull(),
+      contactPhone: text("contactPhone"),
+      status: text("status").default("pending").notNull(),
+      verificationDocuments: text("verificationDocuments"),
+      // JSON array of document URLs
+      accountBalance: real("accountBalance").default(0).notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    manualAds = pgTable("manual_ads", {
+      id: serial("id").primaryKey(),
+      advertiserId: integer("advertiserId").notNull().references(() => advertisers.id, { onDelete: "cascade" }),
+      title: text("title").notNull(),
+      description: text("description"),
+      imageUrl: text("imageUrl").notNull(),
+      landingUrl: text("landingUrl").notNull(),
+      adType: text("adType").notNull(),
+      placement: text("placement").notNull(),
+      status: text("status").default("draft").notNull(),
+      startDate: timestamp("startDate"),
+      endDate: timestamp("endDate"),
+      dailyBudget: real("dailyBudget").notNull(),
+      totalBudget: real("totalBudget").notNull(),
+      impressions: integer("impressions").default(0).notNull(),
+      clicks: integer("clicks").default(0).notNull(),
+      conversions: integer("conversions").default(0).notNull(),
+      costPerImpression: real("costPerImpression").notNull(),
+      costPerClick: real("costPerClick").notNull(),
+      targetAudience: text("targetAudience"),
+      // JSON object with targeting criteria
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    adAnalytics = pgTable("ad_analytics", {
+      id: serial("id").primaryKey(),
+      adId: integer("adId").notNull().references(() => manualAds.id, { onDelete: "cascade" }),
+      date: text("date").notNull(),
+      impressions: integer("impressions").default(0).notNull(),
+      clicks: integer("clicks").default(0).notNull(),
+      conversions: integer("conversions").default(0).notNull(),
+      spend: real("spend").default(0).notNull(),
+      revenue: real("revenue").default(0).notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    adsensePlacements = pgTable("adsense_placements", {
+      id: serial("id").primaryKey(),
+      slotId: text("slotId").notNull().unique(),
+      placement: text("placement").notNull(),
+      adFormat: text("adFormat").notNull(),
+      status: text("status").default("active").notNull(),
+      width: integer("width"),
+      height: integer("height"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    adPayments = pgTable("ad_payments", {
+      id: serial("id").primaryKey(),
+      advertiserId: integer("advertiserId").notNull().references(() => advertisers.id, { onDelete: "cascade" }),
+      amount: real("amount").notNull(),
+      paymentMethod: text("paymentMethod").notNull(),
+      transactionId: text("transactionId").unique(),
+      status: text("status").default("pending").notNull(),
+      description: text("description"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    sponsoredAdPricing = pgTable("sponsored_ad_pricing", {
+      id: serial("id").primaryKey(),
+      tier: text("tier").notNull(),
+      // "basic" | "standard" | "premium"
+      durationDays: integer("durationDays").notNull(),
+      priceNPR: real("priceNPR").notNull(),
+      description: text("description"),
+      maxSlots: integer("maxSlots").default(10).notNull(),
+      isActive: boolean("isActive").default(true).notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    promotionRequests = pgTable("promotion_requests", {
+      id: serial("id").primaryKey(),
+      listingId: integer("listingId").notNull().references(() => listings.id, { onDelete: "cascade" }),
+      userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      tier: text("tier").notNull(),
+      // "basic" | "standard" | "premium"
+      durationDays: integer("durationDays").notNull(),
+      priceNPR: real("priceNPR").notNull(),
+      status: text("status").default("pending").notNull(),
+      // "pending" | "approved" | "rejected"
+      paymentStatus: text("paymentStatus").default("unpaid").notNull(),
+      // "unpaid" | "paid"
+      paymentProviderId: text("paymentProviderId"),
+      paymentUrl: text("paymentUrl"),
+      adminNotes: text("adminNotes"),
+      approvedBy: integer("approvedBy"),
+      approvedAt: timestamp("approvedAt"),
+      featuredUntil: timestamp("featuredUntil"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    emailNotificationPreferences = pgTable("email_notification_preferences", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      newMessages: boolean("newMessages").default(true).notNull(),
+      newBids: boolean("newBids").default(true).notNull(),
+      bookingConfirmation: boolean("bookingConfirmation").default(true).notNull(),
+      listingApproval: boolean("listingApproval").default(true).notNull(),
+      listingRejection: boolean("listingRejection").default(true).notNull(),
+      weeklyDigest: boolean("weeklyDigest").default(true).notNull(),
+      promotionalEmails: boolean("promotionalEmails").default(false).notNull(),
+      securityAlerts: boolean("securityAlerts").default(true).notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    emailQueue = pgTable("email_queue", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      recipientEmail: text("recipientEmail").notNull(),
+      subject: text("subject").notNull(),
+      template: text("template").notNull(),
+      templateData: text("templateData"),
+      // JSON data for template rendering
+      status: text("status").default("pending").notNull(),
+      attemptCount: integer("attemptCount").default(0).notNull(),
+      lastAttemptAt: timestamp("lastAttemptAt"),
+      sentAt: timestamp("sentAt"),
+      errorMessage: text("errorMessage"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    emailLogs = pgTable("email_logs", {
+      id: serial("id").primaryKey(),
+      emailQueueId: integer("emailQueueId").references(() => emailQueue.id, { onDelete: "cascade" }),
+      recipientEmail: text("recipientEmail").notNull(),
+      subject: text("subject").notNull(),
+      template: text("template").notNull(),
+      status: text("status").notNull(),
+      openedAt: timestamp("openedAt"),
+      clickedAt: timestamp("clickedAt"),
+      failureReason: text("failureReason"),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    reviewHelpfulVotes = pgTable("review_helpful_votes", {
+      id: serial("id").primaryKey(),
+      reviewId: integer("reviewId").notNull().references(() => reviews.id, { onDelete: "cascade" }),
+      userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      isHelpful: boolean("isHelpful").notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    reviewAnalytics = pgTable("review_analytics", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      totalReviews: integer("totalReviews").default(0).notNull(),
+      averageRating: real("averageRating").default(0).notNull(),
+      fiveStarCount: integer("fiveStarCount").default(0).notNull(),
+      fourStarCount: integer("fourStarCount").default(0).notNull(),
+      threeStarCount: integer("threeStarCount").default(0).notNull(),
+      twoStarCount: integer("twoStarCount").default(0).notNull(),
+      oneStarCount: integer("oneStarCount").default(0).notNull(),
+      verifiedPurchaseCount: integer("verifiedPurchaseCount").default(0).notNull(),
+      lastReviewDate: timestamp("lastReviewDate"),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    flaggedReviews = pgTable("flagged_reviews", {
+      id: serial("id").primaryKey(),
+      reviewId: integer("reviewId").notNull().references(() => reviews.id, { onDelete: "cascade" }),
+      flaggedByUserId: integer("flaggedByUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      reason: text("reason").notNull(),
+      description: text("description"),
+      status: text("status").default("pending").notNull(),
+      reviewedByAdminId: integer("reviewedByAdminId").references(() => users.id, { onDelete: "set null" }),
+      adminNotes: text("adminNotes"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      resolvedAt: timestamp("resolvedAt")
+    });
+    flaggedListings = pgTable("flagged_listings", {
+      id: serial("id").primaryKey(),
+      listingId: integer("listingId").notNull().references(() => listings.id, { onDelete: "cascade" }),
+      flaggedByUserId: integer("flaggedByUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      reason: text("reason").notNull(),
+      description: text("description"),
+      status: text("status").default("pending").notNull(),
+      reviewedByAdminId: integer("reviewedByAdminId").references(() => users.id, { onDelete: "set null" }),
+      adminNotes: text("adminNotes"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      resolvedAt: timestamp("resolvedAt")
+    });
+    verificationSubmissions = pgTable("verification_submissions", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      type: text("type").notNull(),
+      // 'kyc' or 'kyb'
+      data: jsonb("data").notNull(),
+      // Documents and details
+      status: text("status").default("pending").notNull(),
+      adminNotes: text("adminNotes"),
+      reviewedBy: integer("reviewedBy").references(() => users.id),
+      reviewedAt: timestamp("reviewedAt"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    transactions = pgTable("transactions", {
+      id: serial("id").primaryKey(),
+      orderId: text("orderId"),
+      // Can be booking ID, auction ID, or ad payment ID
+      cartId: integer("cartId"),
+      // Added for multi-vendor checkout reference
+      buyerId: integer("buyerId").references(() => users.id),
+      sellerId: integer("sellerId").references(() => users.id),
+      listingId: integer("listingId").references(() => listings.id),
+      amount: real("amount").notNull(),
+      platformFee: real("platformFee").default(0).notNull(),
+      tax: real("tax").default(0).notNull(),
+      netAmount: real("netAmount").notNull(),
+      currency: text("currency").default("NPR").notNull(),
+      status: text("status").default("pending").notNull(),
+      // pending, completed, failed, refunded
+      paymentMethod: text("paymentMethod"),
+      transactionType: text("transactionType").notNull(),
+      // 'sale', 'rental', 'ad_payment', 'featured_listing'
+      trackingNumber: text("trackingNumber"),
+      // Added for logistics webhook tracking
+      logisticsPartnerId: integer("logisticsPartnerId"),
+      // Reference to the partner
+      deliveryName: text("deliveryName"),
+      deliveryAddress: text("deliveryAddress"),
+      deliveryPhone: text("deliveryPhone"),
+      deliveryEmail: text("deliveryEmail"),
+      deliverySpeed: text("deliverySpeed"),
+      deliveryFee: real("deliveryFee"),
+      estDeliveryDate: text("estDeliveryDate"),
+      placedAt: timestamp("placedAt"),
+      processedAt: timestamp("processedAt"),
+      shippedAt: timestamp("shippedAt"),
+      deliveredAt: timestamp("deliveredAt"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    carts = pgTable("carts", {
+      id: serial("id").primaryKey(),
+      userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      status: text("status").default("active").notNull(),
+      // active, checked_out, abandoned
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    cartItems = pgTable("cart_items", {
+      id: serial("id").primaryKey(),
+      cartId: integer("cartId").notNull().references(() => carts.id, { onDelete: "cascade" }),
+      listingId: integer("listingId").notNull().references(() => listings.id, { onDelete: "cascade" }),
+      quantity: integer("quantity").default(1).notNull(),
+      priceAtAddition: real("priceAtAddition"),
+      // Snapshot price when added
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    logisticsPartners = pgTable("logistics_partners", {
+      id: serial("id").primaryKey(),
+      name: text("name").notNull().unique(),
+      // e.g., 'upaya', 'pathao', 'ncm'
+      displayName: text("displayName").notNull(),
+      isActive: boolean("isActive").default(false).notNull(),
+      webhookUrl: text("webhookUrl"),
+      apiKey: text("apiKey"),
+      apiSecret: text("apiSecret"),
+      trackingUrlFormat: text("trackingUrlFormat"),
+      // e.g., 'https://upaya.com/track/{trackingNumber}'
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    usersRelations = relations(users, ({ many }) => ({
+      listings: many(listings),
+      transactions: many(transactions, { relationName: "buyerTransactions" }),
+      sales: many(transactions, { relationName: "sellerTransactions" }),
+      verifications: many(verificationSubmissions)
+    }));
+    listingsRelations = relations(listings, ({ one, many }) => ({
+      user: one(users, {
+        fields: [listings.userId],
+        references: [users.id]
+      }),
+      category: one(categories, {
+        fields: [listings.categoryId],
+        references: [categories.id]
+      }),
+      transactions: many(transactions)
+    }));
+    transactionsRelations = relations(transactions, ({ one }) => ({
+      buyer: one(users, {
+        fields: [transactions.buyerId],
+        references: [users.id]
+      }),
+      seller: one(users, {
+        fields: [transactions.sellerId],
+        references: [users.id]
+      }),
+      listing: one(listings, {
+        fields: [transactions.listingId],
+        references: [listings.id]
+      }),
+      cart: one(carts, {
+        fields: [transactions.cartId],
+        references: [carts.id]
+      }),
+      logisticsPartner: one(logisticsPartners, {
+        fields: [transactions.logisticsPartnerId],
+        references: [logisticsPartners.id]
+      })
+    }));
+    cartsRelations = relations(carts, ({ one, many }) => ({
+      user: one(users, {
+        fields: [carts.userId],
+        references: [users.id]
+      }),
+      items: many(cartItems),
+      transactions: many(transactions)
+    }));
+    cartItemsRelations = relations(cartItems, ({ one }) => ({
+      cart: one(carts, {
+        fields: [cartItems.cartId],
+        references: [carts.id]
+      }),
+      listing: one(listings, {
+        fields: [cartItems.listingId],
+        references: [listings.id]
+      })
+    }));
+    categoriesRelations = relations(categories, ({ many }) => ({
+      listings: many(listings)
+    }));
+    companyConfigs = pgTable("company_configs", {
+      id: serial("id").primaryKey(),
+      email: text("email").notNull(),
+      phone: text("phone").notNull(),
+      location: text("location").notNull(),
+      commissionRate: real("commissionRate").default(0).notNull(),
+      // Platform commission percentage
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    paymentGateways = pgTable("payment_gateways", {
+      id: serial("id").primaryKey(),
+      name: text("name").notNull().unique(),
+      // e.g. 'esewa', 'khalti', 'fonepay', 'visa'
+      displayName: text("displayName").notNull(),
+      // e.g. 'eSewa', 'Khalti'
+      isActive: boolean("isActive").default(false).notNull(),
+      apiKey: text("apiKey"),
+      apiSecret: text("apiSecret"),
+      merchantId: text("merchantId"),
+      endpoint: text("endpoint"),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    reports = pgTable("reports", {
+      id: serial("id").primaryKey(),
+      reporterName: text("reporterName"),
+      reporterEmail: text("reporterEmail").notNull(),
+      subject: text("subject").notNull(),
+      description: text("description").notNull(),
+      status: text("status").default("pending").notNull(),
+      // pending, resolved
+      adminNotes: text("adminNotes"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      resolvedAt: timestamp("resolvedAt")
+    });
+    careers = pgTable("careers", {
+      id: serial("id").primaryKey(),
+      title: text("title").notNull(),
+      department: text("department").notNull(),
+      location: text("location").notNull(),
+      salaryRange: text("salaryRange").notNull(),
+      type: text("type").notNull(),
+      // Full-Time, Part-Time, Hybrid, etc.
+      description: text("description").notNull(),
+      requirements: text("requirements"),
+      // newline separated
+      status: text("status").default("active").notNull(),
+      // active, closed
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    returns = pgTable("returns", {
+      id: serial("id").primaryKey(),
+      transactionId: integer("transactionId").notNull().references(() => transactions.id, { onDelete: "cascade" }),
+      buyerId: integer("buyerId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      sellerId: integer("sellerId").notNull().references(() => users.id, { onDelete: "cascade" }),
+      reason: text("reason").notNull(),
+      description: text("description"),
+      images: jsonb("images"),
+      // Array of URLs
+      status: text("status").default("pending").notNull(),
+      // pending, approved, rejected, refunded
+      adminNotes: text("adminNotes"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().notNull()
+    });
+    returnsRelations = relations(returns, ({ one }) => ({
+      transaction: one(transactions, {
+        fields: [returns.transactionId],
+        references: [transactions.id]
+      }),
+      buyer: one(users, {
+        fields: [returns.buyerId],
+        references: [users.id]
+      }),
+      seller: one(users, {
+        fields: [returns.sellerId],
+        references: [users.id]
+      })
+    }));
+  }
+});
+
+// backend/_core/crypto.ts
+import crypto from "crypto";
+function getEncryptionKey() {
+  const envKey = process.env.MESSAGE_ENCRYPTION_KEY;
+  if (!envKey) {
+    return DEFAULT_KEY;
+  }
+  return crypto.createHash("sha256").update(envKey).digest();
+}
+function encryptMessage(text2) {
+  if (!text2) return "";
+  try {
+    const key = getEncryptionKey();
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+    let encrypted = cipher.update(text2, "utf8", "base64");
+    encrypted += cipher.final("base64");
+    return `ENC:${iv.toString("hex")}:${encrypted}`;
+  } catch (error) {
+    console.error("[Encryption] Failed to encrypt message:", error);
+    return text2;
+  }
+}
+function decryptMessage(encryptedText) {
+  if (!encryptedText || !encryptedText.startsWith("ENC:")) {
+    return encryptedText;
+  }
+  try {
+    const parts = encryptedText.split(":");
+    if (parts.length !== 3) {
+      return encryptedText;
+    }
+    const ivHex = parts[1];
+    const encryptedData = parts[2];
+    const key = getEncryptionKey();
+    const iv = Buffer.from(ivHex, "hex");
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    let decrypted = decipher.update(encryptedData, "base64", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } catch (error) {
+    console.error("[Encryption] Failed to decrypt message:", error);
+    return encryptedText;
+  }
+}
+var ALGORITHM, DEFAULT_KEY;
+var init_crypto = __esm({
+  "backend/_core/crypto.ts"() {
+    "use strict";
+    ALGORITHM = "aes-256-cbc";
+    DEFAULT_KEY = Buffer.from("f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9", "utf8");
+  }
+});
+
+// backend/db.ts
+var db_exports = {};
+__export(db_exports, {
+  addSellerResponse: () => addSellerResponse,
+  archiveCareerOpening: () => archiveCareerOpening,
+  createCareerOpening: () => createCareerOpening,
+  createTransaction: () => createTransaction,
+  db: () => db,
+  deleteReview: () => deleteReview,
+  flagReview: () => flagReview,
+  getActivePaymentGateways: () => getActivePaymentGateways,
+  getAllCategories: () => getAllCategories,
+  getAllReports: () => getAllReports,
+  getAuctionById: () => getAuctionById,
+  getAuctionByListingId: () => getAuctionByListingId,
+  getAuctions: () => getAuctions,
+  getBidsForAuction: () => getBidsForAuction,
+  getCareers: () => getCareers,
+  getCategories: () => getCategories,
+  getCompanyConfig: () => getCompanyConfig,
+  getConversations: () => getConversations,
+  getDb: () => getDb,
+  getFlaggedReviews: () => getFlaggedReviews,
+  getListingBookings: () => getListingBookings,
+  getListingById: () => getListingById,
+  getListings: () => getListings,
+  getMessages: () => getMessages,
+  getPaymentGateways: () => getPaymentGateways,
+  getReviewById: () => getReviewById,
+  getSellerTransactions: () => getSellerTransactions,
+  getSubcategories: () => getSubcategories,
+  getUserBids: () => getUserBids,
+  getUserBookings: () => getUserBookings,
+  getUserByEmail: () => getUserByEmail,
+  getUserById: () => getUserById,
+  getUserByOpenId: () => getUserByOpenId,
+  getUserFavorites: () => getUserFavorites,
+  getUserGivenReviews: () => getUserGivenReviews,
+  getUserListings: () => getUserListings,
+  getUserNotifications: () => getUserNotifications,
+  getUserReceivedReviews: () => getUserReceivedReviews,
+  getUserReviewAnalytics: () => getUserReviewAnalytics,
+  getUserReviews: () => getUserReviews,
+  getUserTransactions: () => getUserTransactions,
+  isFavorited: () => isFavorited,
+  markReviewHelpful: () => markReviewHelpful,
+  resolveFlaggedReview: () => resolveFlaggedReview,
+  resolveReport: () => resolveReport,
+  searchListings: () => searchListings,
+  submitReport: () => submitReport,
+  submitReview: () => submitReview,
+  updateCompanyConfig: () => updateCompanyConfig,
+  updatePaymentGateway: () => updatePaymentGateway,
+  updateReviewAnalytics: () => updateReviewAnalytics,
+  updateReviewStatus: () => updateReviewStatus,
+  upsertUser: () => upsertUser
+});
+import { eq, desc, and, gt, like, isNull, sql, or, not } from "drizzle-orm/sql";
+import { drizzle as pgDrizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+function initPostgres(connectionString) {
+  const sqlConnection = postgres(connectionString, {
+    ssl: { rejectUnauthorized: false }
+    // Use SSL by default for NeonDB compatibility
+  });
+  return pgDrizzle(sqlConnection, { schema: schema_exports });
+}
+async function getDb() {
+  return _db;
+}
+async function upsertUser(user) {
+  if (!user.openId) {
+    throw new Error("User openId is required for upsert");
+  }
+  const db3 = await getDb();
+  if (!db3) {
+    console.warn("[Database] Cannot upsert user: database not available");
+    return;
+  }
+  try {
+    const values = {
+      openId: user.openId
+    };
+    const updateSet = {};
+    const textFields = ["name", "email", "loginMethod", "phone", "location", "bio", "avatar"];
+    const assignNullable = (field) => {
+      const value = user[field];
+      if (value === void 0) return;
+      const normalized = value ?? null;
+      values[field] = normalized;
+      updateSet[field] = normalized;
+    };
+    textFields.forEach(assignNullable);
+    if (user.lastSignedIn !== void 0) {
+      values.lastSignedIn = user.lastSignedIn;
+      updateSet.lastSignedIn = user.lastSignedIn;
+    }
+    if (user.role !== void 0) {
+      values.role = user.role;
+      updateSet.role = user.role;
+    } else if (user.openId === ENV.ownerOpenId) {
+      values.role = "super_admin";
+      updateSet.role = "super_admin";
+    }
+    if (!values.lastSignedIn) {
+      values.lastSignedIn = /* @__PURE__ */ new Date();
+    }
+    if (Object.keys(updateSet).length === 0) {
+      updateSet.lastSignedIn = /* @__PURE__ */ new Date();
+    }
+    await db3.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
+      set: updateSet
+    });
+  } catch (error) {
+    console.error("[Database] Failed to upsert user:", error);
+    throw error;
+  }
+}
+async function getUserByOpenId(openId) {
+  const db3 = await getDb();
+  if (!db3) {
+    console.warn("[Database] Cannot get user: database not available");
+    return void 0;
+  }
+  const result = await db3.select().from(users).where(eq(users.openId, openId)).limit(1);
+  return result.length > 0 ? result[0] : void 0;
+}
+async function getUserByEmail(email) {
+  const db3 = await getDb();
+  if (!db3) return void 0;
+  const result = await db3.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : void 0;
+}
+async function getUserById(id) {
+  const db3 = await getDb();
+  if (!db3) return void 0;
+  const result = await db3.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : void 0;
+}
+async function getListings(limit = 20, offset = 0) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  const results = await db3.select({
+    listing: listings,
+    seller: {
+      name: users.name,
+      avatar: users.avatar,
+      verificationStatus: users.verificationStatus
+    }
+  }).from(listings).leftJoin(users, eq(listings.userId, users.id)).where(and(
+    eq(listings.status, "active"),
+    gt(listings.stock, 0)
+  )).orderBy(desc(listings.createdAt)).limit(limit).offset(offset);
+  return results.map((row) => ({
+    ...row.listing,
+    seller: row.seller
+  }));
+}
+async function getListingById(id) {
+  const db3 = await getDb();
+  if (!db3) return void 0;
+  const results = await db3.select({
+    listing: listings,
+    seller: {
+      name: users.name,
+      avatar: users.avatar,
+      verificationStatus: users.verificationStatus
+    }
+  }).from(listings).leftJoin(users, eq(listings.userId, users.id)).where(eq(listings.id, id)).limit(1);
+  if (results.length === 0) return void 0;
+  return {
+    ...results[0].listing,
+    seller: results[0].seller
+  };
+}
+async function getUserListings(userId) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  return db3.select().from(listings).where(eq(listings.userId, userId)).orderBy(desc(listings.createdAt));
+}
+async function searchListings(query, limit = 20) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  const results = await db3.select({
+    listing: listings,
+    seller: {
+      name: users.name,
+      avatar: users.avatar,
+      verificationStatus: users.verificationStatus
+    }
+  }).from(listings).leftJoin(users, eq(listings.userId, users.id)).where(and(
+    eq(listings.status, "active"),
+    gt(listings.stock, 0),
+    like(listings.title, `%${query}%`)
+  )).orderBy(desc(listings.createdAt)).limit(limit);
+  return results.map((row) => ({
+    ...row.listing,
+    seller: row.seller
+  }));
+}
+function normalizeCategoryName(category) {
+  if (!category || typeof category.name !== "string") return category;
+  const normalized = category.name.replace(/\s+(Auctions?|Rentals?)$/i, "");
+  return normalized === category.name ? category : { ...category, name: normalized };
+}
+async function getCategories(sector) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  const rootCategoryQuery = db3.select().from(categories).where(and(
+    isNull(categories.parentId),
+    not(eq(categories.slug, "want-to-buy"))
+  ));
+  const mapResults = (rows2) => rows2.map(normalizeCategoryName);
+  if (sector) {
+    const categoryConditions = [
+      isNull(categories.parentId),
+      or(
+        eq(categories.sector, sector),
+        eq(categories.sector, "all")
+      ),
+      not(eq(categories.slug, "want-to-buy"))
+    ];
+    const rows2 = await db3.select().from(categories).where(and(...categoryConditions)).orderBy(categories.name);
+    return mapResults(rows2);
+  }
+  const rows = await rootCategoryQuery.orderBy(categories.name);
+  return mapResults(rows);
+}
+async function getSubcategories(parentId, sector) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  const mapResults = (rows2) => rows2.map(normalizeCategoryName);
+  if (sector) {
+    const rows2 = await db3.select().from(categories).where(and(
+      eq(categories.parentId, parentId),
+      or(
+        eq(categories.sector, sector),
+        eq(categories.sector, "all")
+      )
+    )).orderBy(categories.name);
+    return mapResults(rows2);
+  }
+  const rows = await db3.select().from(categories).where(eq(categories.parentId, parentId)).orderBy(categories.name);
+  return mapResults(rows);
+}
+async function getAllCategories() {
+  const db3 = await getDb();
+  if (!db3) return [];
+  const rows = await db3.select().from(categories).orderBy(categories.name);
+  return rows.map(normalizeCategoryName);
+}
+async function getAuctions(limit = 20) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  const result = await db3.select({
+    auction: auctions,
+    listing: listings,
+    seller: users
+  }).from(auctions).innerJoin(listings, eq(auctions.listingId, listings.id)).innerJoin(users, eq(listings.userId, users.id)).orderBy(desc(auctions.endTime)).limit(limit);
+  return result.map((r) => ({
+    ...r.auction,
+    listing: {
+      title: r.listing.title,
+      description: r.listing.description,
+      price: r.listing.price,
+      images: r.listing.images,
+      location: r.listing.location,
+      category: r.listing.categoryId,
+      seller: {
+        name: r.seller.name,
+        isVerified: r.seller.isVerified,
+        rating: 4.5
+      }
+    }
+  }));
+}
+async function getAuctionById(id) {
+  const db3 = await getDb();
+  if (!db3) return void 0;
+  const result = await db3.select({
+    auction: auctions,
+    listing: listings,
+    seller: users
+  }).from(auctions).innerJoin(listings, eq(auctions.listingId, listings.id)).innerJoin(users, eq(listings.userId, users.id)).where(eq(auctions.id, id)).limit(1);
+  if (result.length === 0) return void 0;
+  return {
+    ...result[0].auction,
+    title: result[0].listing.title,
+    description: result[0].listing.description,
+    image: result[0].listing.images?.[0] || "",
+    location: result[0].listing.location,
+    sellerName: result[0].seller.name,
+    sellerRating: 4.8
+    // Default rating for now
+  };
+}
+async function getAuctionByListingId(listingId) {
+  const db3 = await getDb();
+  if (!db3) return void 0;
+  const result = await db3.select({
+    auction: auctions,
+    listing: listings,
+    seller: users
+  }).from(auctions).innerJoin(listings, eq(auctions.listingId, listings.id)).innerJoin(users, eq(listings.userId, users.id)).where(eq(auctions.listingId, listingId)).limit(1);
+  if (result.length === 0) return void 0;
+  return {
+    ...result[0].auction,
+    title: result[0].listing.title,
+    description: result[0].listing.description,
+    image: result[0].listing.images?.[0] || "",
+    location: result[0].listing.location,
+    sellerName: result[0].seller.name,
+    sellerRating: 4.8
+  };
+}
+async function getBidsForAuction(auctionId) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  return db3.select().from(bids).where(eq(bids.auctionId, auctionId)).orderBy(desc(bids.createdAt));
+}
+async function getConversations(userId) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  const results = await db3.select({
+    id: messages.id,
+    partnerId: sql`CASE WHEN ${messages.senderId} = ${userId} THEN ${messages.recipientId} ELSE ${messages.senderId} END`,
+    content: messages.content,
+    createdAt: messages.createdAt,
+    isRead: messages.isRead,
+    partnerName: users.name,
+    partnerAvatar: users.avatar,
+    listingId: messages.listingId
+  }).from(messages).innerJoin(users, eq(sql`CASE WHEN ${messages.senderId} = ${userId} THEN ${messages.recipientId} ELSE ${messages.senderId} END`, users.id)).where(or(
+    eq(messages.senderId, userId),
+    eq(messages.recipientId, userId)
+  )).orderBy(desc(messages.createdAt));
+  const uniqueConversations = [];
+  const seenPartners = /* @__PURE__ */ new Set();
+  for (const row of results) {
+    if (!seenPartners.has(row.partnerId)) {
+      seenPartners.add(row.partnerId);
+      row.content = decryptMessage(row.content);
+      uniqueConversations.push(row);
+    }
+  }
+  return uniqueConversations;
+}
+async function getMessages(userId1, userId2) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  const rows = await db3.select().from(messages).where(or(
+    and(eq(messages.senderId, userId1), eq(messages.recipientId, userId2)),
+    and(eq(messages.senderId, userId2), eq(messages.recipientId, userId1))
+  )).orderBy(messages.createdAt);
+  return rows.map((row) => ({
+    ...row,
+    content: decryptMessage(row.content)
+  }));
+}
+async function getUserReviews(userId) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  return db3.select().from(reviews).where(eq(reviews.toUserId, userId)).orderBy(desc(reviews.createdAt));
+}
+async function getUserFavorites(userId) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  const results = await db3.select({
+    id: favorites.id,
+    listingId: favorites.listingId,
+    title: listings.title,
+    price: listings.price,
+    image: listings.images,
+    location: listings.location,
+    createdAt: favorites.createdAt
+  }).from(favorites).innerJoin(listings, eq(favorites.listingId, listings.id)).where(eq(favorites.userId, userId));
+  return results.map((row) => ({
+    ...row,
+    image: row.image?.[0] || ""
+  }));
+}
+async function isFavorited(userId, listingId) {
+  const db3 = await getDb();
+  if (!db3) return false;
+  const result = await db3.select().from(favorites).where(and(
+    eq(favorites.userId, userId),
+    eq(favorites.listingId, listingId)
+  )).limit(1);
+  return result.length > 0;
+}
+async function getUserBookings(userId) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  const results = await db3.select({
+    id: bookings.id,
+    listingId: bookings.listingId,
+    title: listings.title,
+    startDate: bookings.startDate,
+    endDate: bookings.endDate,
+    totalPrice: bookings.totalPrice,
+    status: bookings.status,
+    image: listings.images
+  }).from(bookings).innerJoin(listings, eq(bookings.listingId, listings.id)).where(eq(bookings.userId, userId)).orderBy(desc(bookings.createdAt));
+  return results.map((row) => ({
+    ...row,
+    image: row.image?.[0] || ""
+  }));
+}
+async function getListingBookings(listingId) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  return db3.select().from(bookings).where(eq(bookings.listingId, listingId)).orderBy(desc(bookings.createdAt));
+}
+async function getUserTransactions(userId) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  const results = await db3.select({
+    id: transactions.id,
+    orderId: transactions.orderId,
+    buyerId: transactions.buyerId,
+    sellerId: transactions.sellerId,
+    listingId: transactions.listingId,
+    amount: transactions.amount,
+    status: transactions.status,
+    paymentMethod: transactions.paymentMethod,
+    transactionType: transactions.transactionType,
+    deliveryName: transactions.deliveryName,
+    deliveryAddress: transactions.deliveryAddress,
+    deliveryPhone: transactions.deliveryPhone,
+    deliveryEmail: transactions.deliveryEmail,
+    deliverySpeed: transactions.deliverySpeed,
+    deliveryFee: transactions.deliveryFee,
+    estDeliveryDate: transactions.estDeliveryDate,
+    createdAt: transactions.createdAt,
+    title: listings.title,
+    image: listings.images
+  }).from(transactions).innerJoin(listings, eq(transactions.listingId, listings.id)).where(eq(transactions.buyerId, userId)).orderBy(desc(transactions.createdAt));
+  return results.map((row) => ({
+    ...row,
+    image: row.image?.[0] || ""
+  }));
+}
+async function createTransaction(values) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  return db3.insert(transactions).values(values).returning();
+}
+async function getSellerTransactions(userId) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  const results = await db3.select({
+    id: transactions.id,
+    orderId: transactions.orderId,
+    buyerId: transactions.buyerId,
+    sellerId: transactions.sellerId,
+    listingId: transactions.listingId,
+    amount: transactions.amount,
+    status: transactions.status,
+    paymentMethod: transactions.paymentMethod,
+    deliveryName: transactions.deliveryName,
+    deliveryAddress: transactions.deliveryAddress,
+    deliveryPhone: transactions.deliveryPhone,
+    deliveryEmail: transactions.deliveryEmail,
+    deliverySpeed: transactions.deliverySpeed,
+    deliveryFee: transactions.deliveryFee,
+    estDeliveryDate: transactions.estDeliveryDate,
+    createdAt: transactions.createdAt,
+    title: listings.title,
+    image: listings.images
+  }).from(transactions).innerJoin(listings, eq(transactions.listingId, listings.id)).where(eq(transactions.sellerId, userId)).orderBy(desc(transactions.createdAt));
+  return results.map((row) => ({
+    ...row,
+    image: row.image?.[0] || ""
+  }));
+}
+async function getUserBids(userId) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  const results = await db3.select({
+    id: bids.id,
+    auctionId: bids.auctionId,
+    amount: bids.amount,
+    createdAt: bids.createdAt,
+    auctionTitle: listings.title,
+    currentHighestBid: auctions.currentBid,
+    endTime: auctions.endTime,
+    image: listings.images
+  }).from(bids).innerJoin(auctions, eq(bids.auctionId, auctions.id)).innerJoin(listings, eq(auctions.listingId, listings.id)).where(eq(bids.bidderId, userId)).orderBy(desc(bids.createdAt));
+  return results.map((row) => ({
+    ...row,
+    image: row.image?.[0] || ""
+  }));
+}
+async function getUserNotifications(userId) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  return db3.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
+}
+async function submitReview(fromUserId, toUserId, data) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  const result = await db3.insert(reviews).values({
+    fromUserId,
+    toUserId,
+    listingId: data.listingId,
+    transactionId: data.transactionId,
+    rating: Math.max(1, Math.min(5, data.rating)),
+    title: data.title,
+    comment: data.comment,
+    isVerifiedPurchase: data.isVerifiedPurchase || false
+  }).returning({ insertId: reviews.id });
+  await updateReviewAnalytics(toUserId);
+  return result;
+}
+async function getReviewById(reviewId) {
+  const db3 = await getDb();
+  if (!db3) return void 0;
+  const result = await db3.select().from(reviews).where(eq(reviews.id, reviewId)).limit(1);
+  return result.length > 0 ? result[0] : void 0;
+}
+async function getUserReceivedReviews(userId, limit = 20, offset = 0) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  return db3.select().from(reviews).where(and(
+    eq(reviews.toUserId, userId),
+    eq(reviews.status, "approved")
+  )).orderBy(desc(reviews.createdAt)).limit(limit).offset(offset);
+}
+async function getUserGivenReviews(userId, limit = 20, offset = 0) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  return db3.select().from(reviews).where(eq(reviews.fromUserId, userId)).orderBy(desc(reviews.createdAt)).limit(limit).offset(offset);
+}
+async function updateReviewStatus(reviewId, status) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  const review = await getReviewById(reviewId);
+  if (!review) throw new Error("Review not found");
+  await db3.update(reviews).set({ status, updatedAt: /* @__PURE__ */ new Date() }).where(eq(reviews.id, reviewId));
+  if (status === "approved" || review.status === "approved") {
+    await updateReviewAnalytics(review.toUserId);
+  }
+}
+async function addSellerResponse(reviewId, response) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  return db3.update(reviews).set({
+    sellerResponse: response,
+    sellerResponseAt: /* @__PURE__ */ new Date(),
+    updatedAt: /* @__PURE__ */ new Date()
+  }).where(eq(reviews.id, reviewId));
+}
+async function markReviewHelpful(reviewId, userId, isHelpful) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  const existing = await db3.select().from(reviewHelpfulVotes).where(and(
+    eq(reviewHelpfulVotes.reviewId, reviewId),
+    eq(reviewHelpfulVotes.userId, userId)
+  )).limit(1);
+  if (existing.length > 0) {
+    await db3.update(reviewHelpfulVotes).set({ isHelpful }).where(and(
+      eq(reviewHelpfulVotes.reviewId, reviewId),
+      eq(reviewHelpfulVotes.userId, userId)
+    ));
+  } else {
+    await db3.insert(reviewHelpfulVotes).values({
+      reviewId,
+      userId,
+      isHelpful
+    });
+  }
+  const votes = await db3.select().from(reviewHelpfulVotes).where(eq(reviewHelpfulVotes.reviewId, reviewId));
+  const helpfulCount = votes.filter((v) => v.isHelpful).length;
+  const unhelpfulCount = votes.filter((v) => !v.isHelpful).length;
+  return db3.update(reviews).set({
+    helpfulCount,
+    unhelpfulCount,
+    updatedAt: /* @__PURE__ */ new Date()
+  }).where(eq(reviews.id, reviewId));
+}
+async function flagReview(reviewId, flaggedByUserId, reason, description) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  await db3.insert(flaggedReviews).values({
+    reviewId,
+    flaggedByUserId,
+    reason,
+    description
+  });
+  return db3.update(reviews).set({ status: "flagged", updatedAt: /* @__PURE__ */ new Date() }).where(eq(reviews.id, reviewId));
+}
+async function getFlaggedReviews(limit = 20, offset = 0) {
+  const db3 = await getDb();
+  if (!db3) return [];
+  return db3.select().from(flaggedReviews).where(eq(flaggedReviews.status, "pending")).orderBy(desc(flaggedReviews.createdAt)).limit(limit).offset(offset);
+}
+async function resolveFlaggedReview(flaggedReviewId, adminId, status, adminNotes) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  const flaggedReview = await db3.select().from(flaggedReviews).where(eq(flaggedReviews.id, flaggedReviewId)).limit(1);
+  if (flaggedReview.length === 0) throw new Error("Flagged review not found");
+  await db3.update(flaggedReviews).set({
+    status,
+    reviewedByAdminId: adminId,
+    adminNotes,
+    resolvedAt: /* @__PURE__ */ new Date()
+  }).where(eq(flaggedReviews.id, flaggedReviewId));
+  if (status === "removed") {
+    const review = await getReviewById(flaggedReview[0].reviewId);
+    if (review) {
+      await db3.update(reviews).set({ status: "rejected", updatedAt: /* @__PURE__ */ new Date() }).where(eq(reviews.id, flaggedReview[0].reviewId));
+      await updateReviewAnalytics(review.toUserId);
+    }
+  }
+}
+async function getUserReviewAnalytics(userId) {
+  const db3 = await getDb();
+  if (!db3) return void 0;
+  let analytics = await db3.select().from(reviewAnalytics).where(eq(reviewAnalytics.userId, userId)).limit(1);
+  if (analytics.length === 0) {
+    await db3.insert(reviewAnalytics).values({
+      userId,
+      totalReviews: 0,
+      averageRating: 0
+    });
+    analytics = await db3.select().from(reviewAnalytics).where(eq(reviewAnalytics.userId, userId)).limit(1);
+  }
+  return analytics[0];
+}
+async function updateReviewAnalytics(userId) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  const userReviews = await db3.select().from(reviews).where(and(
+    eq(reviews.toUserId, userId),
+    eq(reviews.status, "approved")
+  ));
+  if (userReviews.length === 0) {
+    return db3.update(reviewAnalytics).set({
+      totalReviews: 0,
+      averageRating: 0,
+      fiveStarCount: 0,
+      fourStarCount: 0,
+      threeStarCount: 0,
+      twoStarCount: 0,
+      oneStarCount: 0,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq(reviewAnalytics.userId, userId));
+  }
+  const totalReviews = userReviews.length;
+  const averageRating = userReviews.reduce((sum2, r) => sum2 + r.rating, 0) / totalReviews;
+  const fiveStarCount = userReviews.filter((r) => r.rating === 5).length;
+  const fourStarCount = userReviews.filter((r) => r.rating === 4).length;
+  const threeStarCount = userReviews.filter((r) => r.rating === 3).length;
+  const twoStarCount = userReviews.filter((r) => r.rating === 2).length;
+  const oneStarCount = userReviews.filter((r) => r.rating === 1).length;
+  const verifiedPurchaseCount = userReviews.filter((r) => r.isVerifiedPurchase).length;
+  const lastReviewDate = userReviews[0]?.createdAt;
+  return db3.update(reviewAnalytics).set({
+    totalReviews,
+    averageRating: Math.round(averageRating * 100) / 100,
+    fiveStarCount,
+    fourStarCount,
+    threeStarCount,
+    twoStarCount,
+    oneStarCount,
+    verifiedPurchaseCount,
+    lastReviewDate,
+    updatedAt: /* @__PURE__ */ new Date()
+  }).where(eq(reviewAnalytics.userId, userId));
+}
+async function deleteReview(reviewId) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  const review = await getReviewById(reviewId);
+  if (!review) throw new Error("Review not found");
+  await db3.delete(reviewHelpfulVotes).where(eq(reviewHelpfulVotes.reviewId, reviewId));
+  await db3.delete(flaggedReviews).where(eq(flaggedReviews.reviewId, reviewId));
+  await db3.delete(reviews).where(eq(reviews.id, reviewId));
+  await updateReviewAnalytics(review.toUserId);
+}
+async function getCompanyConfig() {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  const results = await db3.select().from(companyConfigs).limit(1);
+  if (results.length > 0) return results[0];
+  const defaultConfig = {
+    id: 1,
+    email: "support@sasto.com",
+    phone: "+977-1-4123456",
+    location: "New Baneshwor, Kathmandu",
+    commissionRate: 0,
+    updatedAt: /* @__PURE__ */ new Date()
+  };
+  try {
+    await db3.insert(companyConfigs).values(defaultConfig);
+  } catch (e) {
+    console.error("Seeding companyConfigs failed", e);
+  }
+  return defaultConfig;
+}
+async function updateCompanyConfig(data) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  const active = await getCompanyConfig();
+  const updateData = { updatedAt: /* @__PURE__ */ new Date() };
+  if (data.email !== void 0) updateData.email = data.email;
+  if (data.phone !== void 0) updateData.phone = data.phone;
+  if (data.location !== void 0) updateData.location = data.location;
+  if (data.commissionRate !== void 0) updateData.commissionRate = data.commissionRate;
+  await db3.update(companyConfigs).set(updateData).where(eq(companyConfigs.id, active.id));
+  return { ...active, ...updateData };
+}
+async function submitReport(data) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  return db3.insert(reports).values({
+    reporterName: data.reporterName || null,
+    reporterEmail: data.reporterEmail,
+    subject: data.subject,
+    description: data.description,
+    status: "pending",
+    createdAt: /* @__PURE__ */ new Date()
+  }).returning({ insertId: reports.id });
+}
+async function getAllReports() {
+  const db3 = await getDb();
+  if (!db3) return [];
+  return db3.select().from(reports).orderBy(desc(reports.createdAt));
+}
+async function resolveReport(reportId, adminNotes) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  return db3.update(reports).set({ status: "resolved", adminNotes: adminNotes || null, resolvedAt: /* @__PURE__ */ new Date() }).where(eq(reports.id, reportId));
+}
+async function getCareers() {
+  const db3 = await getDb();
+  if (!db3) return [];
+  return db3.select().from(careers).where(eq(careers.status, "active")).orderBy(desc(careers.createdAt));
+}
+async function createCareerOpening(data) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  return db3.insert(careers).values({
+    title: data.title,
+    department: data.department,
+    location: data.location,
+    salaryRange: data.salaryRange,
+    type: data.type,
+    description: data.description,
+    requirements: data.requirements || null,
+    status: "active",
+    createdAt: /* @__PURE__ */ new Date()
+  }).returning({ insertId: careers.id });
+}
+async function archiveCareerOpening(id) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  return db3.update(careers).set({ status: "closed" }).where(eq(careers.id, id));
+}
+async function getPaymentGateways() {
+  const db3 = await getDb();
+  if (!db3) return [];
+  let gateways = await db3.select().from(paymentGateways).orderBy(paymentGateways.name);
+  if (gateways.length === 0) {
+    const defaults = [
+      { name: "esewa", displayName: "eSewa Mobile Wallet", isActive: false, updatedAt: /* @__PURE__ */ new Date() },
+      { name: "khalti", displayName: "Khalti", isActive: false, updatedAt: /* @__PURE__ */ new Date() },
+      { name: "visa", displayName: "Visa / Mastercard", isActive: false, updatedAt: /* @__PURE__ */ new Date() },
+      { name: "fonepay", displayName: "Fonepay", isActive: false, updatedAt: /* @__PURE__ */ new Date() }
+    ];
+    for (const gw of defaults) {
+      await db3.insert(paymentGateways).values(gw);
+    }
+    gateways = await db3.select().from(paymentGateways).orderBy(paymentGateways.name);
+  }
+  return gateways;
+}
+async function getActivePaymentGateways() {
+  const db3 = await getDb();
+  if (!db3) return [];
+  return db3.select({
+    id: paymentGateways.id,
+    name: paymentGateways.name,
+    displayName: paymentGateways.displayName,
+    isActive: paymentGateways.isActive
+  }).from(paymentGateways).where(eq(paymentGateways.isActive, true));
+}
+async function updatePaymentGateway(name, data) {
+  const db3 = await getDb();
+  if (!db3) throw new Error("Database not available");
+  const existing = await db3.select().from(paymentGateways).where(eq(paymentGateways.name, name)).limit(1);
+  if (existing.length === 0) {
+    await db3.insert(paymentGateways).values({
+      name,
+      displayName: data.displayName || name,
+      isActive: data.isActive || false,
+      apiKey: data.apiKey,
+      apiSecret: data.apiSecret,
+      merchantId: data.merchantId,
+      endpoint: data.endpoint,
+      updatedAt: /* @__PURE__ */ new Date()
+    });
+  } else {
+    await db3.update(paymentGateways).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq(paymentGateways.name, name));
+  }
+}
+var rawConnectionString, _db, db;
+var init_db = __esm({
+  "backend/db.ts"() {
+    "use strict";
+    init_schema();
+    init_schema();
+    init_env();
+    init_crypto();
+    init_debugLog();
+    rawConnectionString = process.env.DATABASE_URL;
+    if (!rawConnectionString) {
+      writeDebugLog({
+        sessionId: "90368c",
+        runId: "debug_pre",
+        hypothesisId: "H1_env",
+        location: "backend/db.ts:database_url_missing",
+        message: "DATABASE_URL missing",
+        data: { DATABASE_URL_SET: false },
+        timestamp: Date.now()
+      });
+      throw new Error("DATABASE_URL environment variable is required for Postgres connection");
+    }
+    _db = void 0;
+    try {
+      _db = initPostgres(rawConnectionString);
+      console.info("[Database] Initialized Postgres via DATABASE_URL");
+      writeDebugLog({
+        sessionId: "90368c",
+        runId: "debug_pre",
+        hypothesisId: "H3_db",
+        location: "backend/db.ts:db_init_success",
+        message: "DB initialized",
+        data: { DATABASE_URL_SET: true },
+        timestamp: Date.now()
+      });
+    } catch (err) {
+      console.error("[Database] Failed to initialize Postgres DB:", err);
+      throw err;
+    }
+    db = _db;
+  }
+});
+
 // backend/websocket.ts
 var websocket_exports = {};
 __export(websocket_exports, {
@@ -337,37 +1995,16 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import rateLimit from "express-rate-limit";
 
 // backend/routers/index.ts
-import { TRPCError as TRPCError10 } from "@trpc/server";
-import { z as z14 } from "zod";
+import { TRPCError as TRPCError11 } from "@trpc/server";
+import { z as z15 } from "zod";
 import { nanoid } from "nanoid";
 
 // backend/_core/systemRouter.ts
 import { z } from "zod";
 
 // backend/_core/notification.ts
+init_env();
 import { TRPCError } from "@trpc/server";
-
-// backend/_core/env.ts
-var ENV = {
-  appId: process.env.VITE_APP_ID ?? "",
-  // Read from COOKIE_SECRET first, fall back to JWT_SECRET for backward compatibility
-  cookieSecret: process.env.COOKIE_SECRET || process.env.JWT_SECRET || "",
-  googleClientId: process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || "",
-  databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
-  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
-  isProduction: process.env.NODE_ENV === "production",
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? ""
-};
-if (process.env.NODE_ENV === "development") {
-  console.log("[ENV] Configuration loaded:");
-  console.log("[ENV] Google Client ID:", ENV.googleClientId ? "SET (" + ENV.googleClientId.substring(0, 20) + "...)" : "NOT SET");
-  console.log("[ENV] App ID:", ENV.appId);
-  console.log("[ENV] Cookie Secret:", ENV.cookieSecret ? "SET" : "NOT SET");
-}
-
-// backend/_core/notification.ts
 var TITLE_MAX_LENGTH = 1200;
 var CONTENT_MAX_LENGTH = 2e4;
 var trimValue = (value) => value.trim();
@@ -454,39 +2091,9 @@ var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
 
 // backend/_core/trpc.ts
+init_debugLog();
 import { initTRPC, TRPCError as TRPCError2 } from "@trpc/server";
 import superjson from "superjson";
-
-// backend/_core/debugLog.ts
-import fs from "fs";
-import path from "path";
-var SESSION_ID = "90368c";
-var INGEST_URL = "http://127.0.0.1:7884/ingest/4eb48921-d438-46ea-8ea8-0991e31d49ad";
-var LOG_PATH = path.resolve(process.cwd(), "debug-90368c.log");
-function writeDebugLog(payload) {
-  const line = JSON.stringify(payload) + "\n";
-  try {
-    fs.appendFileSync(LOG_PATH, line, { encoding: "utf8" });
-  } catch {
-  }
-  try {
-    const f = globalThis.fetch;
-    if (typeof f === "function") {
-      f(INGEST_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": SESSION_ID
-        },
-        body: JSON.stringify(payload)
-      }).catch(() => {
-      });
-    }
-  } catch {
-  }
-}
-
-// backend/_core/trpc.ts
 var t = initTRPC.context().create({
   transformer: superjson
 });
@@ -544,1487 +2151,9 @@ var adminProcedure = t.procedure.use(logTrpcErrors).use(
   })
 );
 
-// backend/db.ts
-import { eq, desc, and, gt, like, isNull, sql, or, not } from "drizzle-orm/sql";
-import { drizzle as pgDrizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-
-// drizzle/schema.ts
-var schema_exports = {};
-__export(schema_exports, {
-  adAnalytics: () => adAnalytics,
-  adPayments: () => adPayments,
-  adminLogs: () => adminLogs,
-  adsensePlacements: () => adsensePlacements,
-  advertisers: () => advertisers,
-  auctions: () => auctions,
-  bids: () => bids,
-  bookings: () => bookings,
-  careers: () => careers,
-  cartItems: () => cartItems,
-  cartItemsRelations: () => cartItemsRelations,
-  carts: () => carts,
-  cartsRelations: () => cartsRelations,
-  categories: () => categories,
-  categoriesRelations: () => categoriesRelations,
-  companyConfigs: () => companyConfigs,
-  disputes: () => disputes,
-  emailLogs: () => emailLogs,
-  emailNotificationPreferences: () => emailNotificationPreferences,
-  emailQueue: () => emailQueue,
-  favorites: () => favorites,
-  flaggedListings: () => flaggedListings,
-  flaggedReviews: () => flaggedReviews,
-  listings: () => listings,
-  listingsRelations: () => listingsRelations,
-  logisticsPartners: () => logisticsPartners,
-  manualAds: () => manualAds,
-  messages: () => messages,
-  notifications: () => notifications,
-  paymentGateways: () => paymentGateways,
-  permissions: () => permissions,
-  promotionRequests: () => promotionRequests,
-  reports: () => reports,
-  returns: () => returns,
-  returnsRelations: () => returnsRelations,
-  reviewAnalytics: () => reviewAnalytics,
-  reviewHelpfulVotes: () => reviewHelpfulVotes,
-  reviews: () => reviews,
-  roleAuditLogs: () => roleAuditLogs,
-  rolePermissions: () => rolePermissions,
-  roles: () => roles,
-  sponsoredAdPricing: () => sponsoredAdPricing,
-  transactions: () => transactions,
-  transactionsRelations: () => transactionsRelations,
-  userRoles: () => userRoles,
-  users: () => users,
-  usersRelations: () => usersRelations,
-  verificationSubmissions: () => verificationSubmissions
-});
-import { pgTable, text, integer, real, boolean, timestamp, jsonb, serial } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
-var users = pgTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
-  id: serial("id").primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: text("openId").notNull().unique(),
-  name: text("name"),
-  email: text("email"),
-  phone: text("phone"),
-  location: text("location"),
-  bio: text("bio"),
-  avatar: text("avatar"),
-  loginMethod: text("loginMethod"),
-  password: text("password"),
-  role: text("role").default("user").notNull(),
-  status: text("status").default("active").notNull(),
-  verificationStatus: text("verificationStatus").default("unverified").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-  lastLogin: timestamp("lastLogin"),
-  isVerified: boolean("isVerified").default(false).notNull(),
-  verificationLevel: text("verificationLevel").default("basic").notNull(),
-  resetToken: text("resetToken"),
-  resetTokenExpires: timestamp("resetTokenExpires"),
-  // Advanced business fields
-  businessName: text("businessName"),
-  businessLicense: text("businessLicense"),
-  experienceYears: integer("experienceYears"),
-  specialties: text("specialties"),
-  // Comma separated list of categories
-  socialLinks: text("socialLinks"),
-  // JSON string
-  bannerImage: text("bannerImage")
-});
-var categories = pgTable("categories", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
-  description: text("description"),
-  icon: text("icon"),
-  parentId: integer("parentId"),
-  sector: text("sector").default("marketplace"),
-  // marketplace, auction, rental, all
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var listings = pgTable("listings", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(),
-  categoryId: integer("categoryId").notNull(),
-  title: text("title").notNull(),
-  description: text("description"),
-  type: text("type").notNull(),
-  price: real("price"),
-  images: jsonb("images"),
-  location: text("location"),
-  district: text("district"),
-  brand: text("brand"),
-  model: text("model"),
-  color: text("color"),
-  condition: text("condition"),
-  status: text("status").default("active"),
-  views: integer("views").default(0),
-  stock: integer("stock").default(1),
-  isFeatured: boolean("isFeatured").default(false),
-  featuredUntil: timestamp("featuredUntil"),
-  originalPrice: real("originalPrice"),
-  discount: integer("discount"),
-  videoUrl: text("videoUrl"),
-  length: real("length"),
-  // Logistics: Length in cm
-  width: real("width"),
-  // Logistics: Width in cm
-  height: real("height"),
-  // Logistics: Height in cm
-  weight: real("weight"),
-  // Logistics: Weight in kg
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-  expiresAt: timestamp("expiresAt")
-});
-var auctions = pgTable("auctions", {
-  id: serial("id").primaryKey(),
-  listingId: integer("listingId").notNull(),
-  startingPrice: real("startingPrice").notNull(),
-  currentBid: real("currentBid"),
-  highestBidderId: integer("highestBidderId"),
-  startTime: timestamp("startTime").notNull(),
-  endTime: timestamp("endTime").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var bids = pgTable("bids", {
-  id: serial("id").primaryKey(),
-  auctionId: integer("auctionId").notNull(),
-  bidderId: integer("bidderId").notNull(),
-  amount: real("amount").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var bookings = pgTable("bookings", {
-  id: serial("id").primaryKey(),
-  listingId: integer("listingId").notNull(),
-  userId: integer("userId").notNull(),
-  startDate: timestamp("startDate").notNull(),
-  endDate: timestamp("endDate").notNull(),
-  totalPrice: real("totalPrice").notNull(),
-  status: text("status").default("pending"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var favorites = pgTable("favorites", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(),
-  listingId: integer("listingId").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
-  senderId: integer("senderId").notNull(),
-  recipientId: integer("recipientId").notNull(),
-  listingId: integer("listingId"),
-  content: text("content").notNull(),
-  isRead: boolean("isRead").default(false),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  attachmentUrl: text("attachmentUrl"),
-  attachmentType: text("attachmentType")
-});
-var reviews = pgTable("reviews", {
-  id: serial("id").primaryKey(),
-  fromUserId: integer("fromUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  toUserId: integer("toUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  listingId: integer("listingId").references(() => listings.id, { onDelete: "cascade" }),
-  transactionId: integer("transactionId"),
-  rating: integer("rating").notNull(),
-  title: text("title"),
-  comment: text("comment"),
-  isVerifiedPurchase: boolean("isVerifiedPurchase").default(false).notNull(),
-  helpfulCount: integer("helpfulCount").default(0).notNull(),
-  unhelpfulCount: integer("unhelpfulCount").default(0).notNull(),
-  status: text("status").default("approved").notNull(),
-  sellerResponse: text("sellerResponse"),
-  sellerResponseAt: timestamp("sellerResponseAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var notifications = pgTable("notifications", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(),
-  type: text("type").notNull(),
-  title: text("title").notNull(),
-  content: text("content"),
-  relatedId: integer("relatedId"),
-  isRead: boolean("isRead").default(false),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var disputes = pgTable("disputes", {
-  id: serial("id").primaryKey(),
-  buyerId: integer("buyerId").notNull(),
-  sellerId: integer("sellerId").notNull(),
-  listingId: integer("listingId").notNull(),
-  title: text("title").notNull(),
-  description: text("description"),
-  status: text("status").default("open").notNull(),
-  resolution: text("resolution"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  resolvedAt: timestamp("resolvedAt"),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var adminLogs = pgTable("adminLogs", {
-  id: serial("id").primaryKey(),
-  adminId: integer("adminId").notNull(),
-  action: text("action").notNull(),
-  targetUserId: integer("targetUserId"),
-  targetListingId: integer("targetListingId"),
-  targetDisputeId: integer("targetDisputeId"),
-  details: text("details"),
-  timestamp: timestamp("timestamp").defaultNow().notNull()
-});
-var roles = pgTable("roles", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  description: text("description"),
-  level: integer("level").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var permissions = pgTable("permissions", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  description: text("description"),
-  category: text("category").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var rolePermissions = pgTable("role_permissions", {
-  id: serial("id").primaryKey(),
-  roleId: integer("roleId").notNull().references(() => roles.id, { onDelete: "cascade" }),
-  permissionId: integer("permissionId").notNull().references(() => permissions.id, { onDelete: "cascade" }),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var userRoles = pgTable("user_roles", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  roleId: integer("roleId").notNull().references(() => roles.id, { onDelete: "cascade" }),
-  assignedBy: integer("assignedBy").references(() => users.id),
-  assignedAt: timestamp("assignedAt").defaultNow().notNull(),
-  expiresAt: timestamp("expiresAt")
-});
-var roleAuditLogs = pgTable("role_audit_logs", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  action: text("action").notNull(),
-  targetUserId: integer("targetUserId").references(() => users.id, { onDelete: "set null" }),
-  details: text("details"),
-  ipAddress: text("ipAddress"),
-  userAgent: text("userAgent"),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var advertisers = pgTable("advertisers", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  businessName: text("businessName").notNull(),
-  businessUrl: text("businessUrl"),
-  contactEmail: text("contactEmail").notNull(),
-  contactPhone: text("contactPhone"),
-  status: text("status").default("pending").notNull(),
-  verificationDocuments: text("verificationDocuments"),
-  // JSON array of document URLs
-  accountBalance: real("accountBalance").default(0).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var manualAds = pgTable("manual_ads", {
-  id: serial("id").primaryKey(),
-  advertiserId: integer("advertiserId").notNull().references(() => advertisers.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  description: text("description"),
-  imageUrl: text("imageUrl").notNull(),
-  landingUrl: text("landingUrl").notNull(),
-  adType: text("adType").notNull(),
-  placement: text("placement").notNull(),
-  status: text("status").default("draft").notNull(),
-  startDate: timestamp("startDate"),
-  endDate: timestamp("endDate"),
-  dailyBudget: real("dailyBudget").notNull(),
-  totalBudget: real("totalBudget").notNull(),
-  impressions: integer("impressions").default(0).notNull(),
-  clicks: integer("clicks").default(0).notNull(),
-  conversions: integer("conversions").default(0).notNull(),
-  costPerImpression: real("costPerImpression").notNull(),
-  costPerClick: real("costPerClick").notNull(),
-  targetAudience: text("targetAudience"),
-  // JSON object with targeting criteria
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var adAnalytics = pgTable("ad_analytics", {
-  id: serial("id").primaryKey(),
-  adId: integer("adId").notNull().references(() => manualAds.id, { onDelete: "cascade" }),
-  date: text("date").notNull(),
-  impressions: integer("impressions").default(0).notNull(),
-  clicks: integer("clicks").default(0).notNull(),
-  conversions: integer("conversions").default(0).notNull(),
-  spend: real("spend").default(0).notNull(),
-  revenue: real("revenue").default(0).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var adsensePlacements = pgTable("adsense_placements", {
-  id: serial("id").primaryKey(),
-  slotId: text("slotId").notNull().unique(),
-  placement: text("placement").notNull(),
-  adFormat: text("adFormat").notNull(),
-  status: text("status").default("active").notNull(),
-  width: integer("width"),
-  height: integer("height"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var adPayments = pgTable("ad_payments", {
-  id: serial("id").primaryKey(),
-  advertiserId: integer("advertiserId").notNull().references(() => advertisers.id, { onDelete: "cascade" }),
-  amount: real("amount").notNull(),
-  paymentMethod: text("paymentMethod").notNull(),
-  transactionId: text("transactionId").unique(),
-  status: text("status").default("pending").notNull(),
-  description: text("description"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var sponsoredAdPricing = pgTable("sponsored_ad_pricing", {
-  id: serial("id").primaryKey(),
-  tier: text("tier").notNull(),
-  // "basic" | "standard" | "premium"
-  durationDays: integer("durationDays").notNull(),
-  priceNPR: real("priceNPR").notNull(),
-  description: text("description"),
-  maxSlots: integer("maxSlots").default(10).notNull(),
-  isActive: boolean("isActive").default(true).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var promotionRequests = pgTable("promotion_requests", {
-  id: serial("id").primaryKey(),
-  listingId: integer("listingId").notNull().references(() => listings.id, { onDelete: "cascade" }),
-  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  tier: text("tier").notNull(),
-  // "basic" | "standard" | "premium"
-  durationDays: integer("durationDays").notNull(),
-  priceNPR: real("priceNPR").notNull(),
-  status: text("status").default("pending").notNull(),
-  // "pending" | "approved" | "rejected"
-  paymentStatus: text("paymentStatus").default("unpaid").notNull(),
-  // "unpaid" | "paid"
-  paymentProviderId: text("paymentProviderId"),
-  paymentUrl: text("paymentUrl"),
-  adminNotes: text("adminNotes"),
-  approvedBy: integer("approvedBy"),
-  approvedAt: timestamp("approvedAt"),
-  featuredUntil: timestamp("featuredUntil"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var emailNotificationPreferences = pgTable("email_notification_preferences", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  newMessages: boolean("newMessages").default(true).notNull(),
-  newBids: boolean("newBids").default(true).notNull(),
-  bookingConfirmation: boolean("bookingConfirmation").default(true).notNull(),
-  listingApproval: boolean("listingApproval").default(true).notNull(),
-  listingRejection: boolean("listingRejection").default(true).notNull(),
-  weeklyDigest: boolean("weeklyDigest").default(true).notNull(),
-  promotionalEmails: boolean("promotionalEmails").default(false).notNull(),
-  securityAlerts: boolean("securityAlerts").default(true).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var emailQueue = pgTable("email_queue", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  recipientEmail: text("recipientEmail").notNull(),
-  subject: text("subject").notNull(),
-  template: text("template").notNull(),
-  templateData: text("templateData"),
-  // JSON data for template rendering
-  status: text("status").default("pending").notNull(),
-  attemptCount: integer("attemptCount").default(0).notNull(),
-  lastAttemptAt: timestamp("lastAttemptAt"),
-  sentAt: timestamp("sentAt"),
-  errorMessage: text("errorMessage"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var emailLogs = pgTable("email_logs", {
-  id: serial("id").primaryKey(),
-  emailQueueId: integer("emailQueueId").references(() => emailQueue.id, { onDelete: "cascade" }),
-  recipientEmail: text("recipientEmail").notNull(),
-  subject: text("subject").notNull(),
-  template: text("template").notNull(),
-  status: text("status").notNull(),
-  openedAt: timestamp("openedAt"),
-  clickedAt: timestamp("clickedAt"),
-  failureReason: text("failureReason"),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var reviewHelpfulVotes = pgTable("review_helpful_votes", {
-  id: serial("id").primaryKey(),
-  reviewId: integer("reviewId").notNull().references(() => reviews.id, { onDelete: "cascade" }),
-  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  isHelpful: boolean("isHelpful").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var reviewAnalytics = pgTable("review_analytics", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  totalReviews: integer("totalReviews").default(0).notNull(),
-  averageRating: real("averageRating").default(0).notNull(),
-  fiveStarCount: integer("fiveStarCount").default(0).notNull(),
-  fourStarCount: integer("fourStarCount").default(0).notNull(),
-  threeStarCount: integer("threeStarCount").default(0).notNull(),
-  twoStarCount: integer("twoStarCount").default(0).notNull(),
-  oneStarCount: integer("oneStarCount").default(0).notNull(),
-  verifiedPurchaseCount: integer("verifiedPurchaseCount").default(0).notNull(),
-  lastReviewDate: timestamp("lastReviewDate"),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var flaggedReviews = pgTable("flagged_reviews", {
-  id: serial("id").primaryKey(),
-  reviewId: integer("reviewId").notNull().references(() => reviews.id, { onDelete: "cascade" }),
-  flaggedByUserId: integer("flaggedByUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  reason: text("reason").notNull(),
-  description: text("description"),
-  status: text("status").default("pending").notNull(),
-  reviewedByAdminId: integer("reviewedByAdminId").references(() => users.id, { onDelete: "set null" }),
-  adminNotes: text("adminNotes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  resolvedAt: timestamp("resolvedAt")
-});
-var flaggedListings = pgTable("flagged_listings", {
-  id: serial("id").primaryKey(),
-  listingId: integer("listingId").notNull().references(() => listings.id, { onDelete: "cascade" }),
-  flaggedByUserId: integer("flaggedByUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  reason: text("reason").notNull(),
-  description: text("description"),
-  status: text("status").default("pending").notNull(),
-  reviewedByAdminId: integer("reviewedByAdminId").references(() => users.id, { onDelete: "set null" }),
-  adminNotes: text("adminNotes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  resolvedAt: timestamp("resolvedAt")
-});
-var verificationSubmissions = pgTable("verification_submissions", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  // 'kyc' or 'kyb'
-  data: jsonb("data").notNull(),
-  // Documents and details
-  status: text("status").default("pending").notNull(),
-  adminNotes: text("adminNotes"),
-  reviewedBy: integer("reviewedBy").references(() => users.id),
-  reviewedAt: timestamp("reviewedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var transactions = pgTable("transactions", {
-  id: serial("id").primaryKey(),
-  orderId: text("orderId"),
-  // Can be booking ID, auction ID, or ad payment ID
-  cartId: integer("cartId"),
-  // Added for multi-vendor checkout reference
-  buyerId: integer("buyerId").references(() => users.id),
-  sellerId: integer("sellerId").references(() => users.id),
-  listingId: integer("listingId").references(() => listings.id),
-  amount: real("amount").notNull(),
-  platformFee: real("platformFee").default(0).notNull(),
-  tax: real("tax").default(0).notNull(),
-  netAmount: real("netAmount").notNull(),
-  currency: text("currency").default("NPR").notNull(),
-  status: text("status").default("pending").notNull(),
-  // pending, completed, failed, refunded
-  paymentMethod: text("paymentMethod"),
-  transactionType: text("transactionType").notNull(),
-  // 'sale', 'rental', 'ad_payment', 'featured_listing'
-  trackingNumber: text("trackingNumber"),
-  // Added for logistics webhook tracking
-  logisticsPartnerId: integer("logisticsPartnerId"),
-  // Reference to the partner
-  deliveryName: text("deliveryName"),
-  deliveryAddress: text("deliveryAddress"),
-  deliveryPhone: text("deliveryPhone"),
-  deliveryEmail: text("deliveryEmail"),
-  deliverySpeed: text("deliverySpeed"),
-  deliveryFee: real("deliveryFee"),
-  estDeliveryDate: text("estDeliveryDate"),
-  placedAt: timestamp("placedAt"),
-  processedAt: timestamp("processedAt"),
-  shippedAt: timestamp("shippedAt"),
-  deliveredAt: timestamp("deliveredAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var carts = pgTable("carts", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  status: text("status").default("active").notNull(),
-  // active, checked_out, abandoned
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var cartItems = pgTable("cart_items", {
-  id: serial("id").primaryKey(),
-  cartId: integer("cartId").notNull().references(() => carts.id, { onDelete: "cascade" }),
-  listingId: integer("listingId").notNull().references(() => listings.id, { onDelete: "cascade" }),
-  quantity: integer("quantity").default(1).notNull(),
-  priceAtAddition: real("priceAtAddition"),
-  // Snapshot price when added
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var logisticsPartners = pgTable("logistics_partners", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  // e.g., 'upaya', 'pathao', 'ncm'
-  displayName: text("displayName").notNull(),
-  isActive: boolean("isActive").default(false).notNull(),
-  webhookUrl: text("webhookUrl"),
-  apiKey: text("apiKey"),
-  apiSecret: text("apiSecret"),
-  trackingUrlFormat: text("trackingUrlFormat"),
-  // e.g., 'https://upaya.com/track/{trackingNumber}'
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var usersRelations = relations(users, ({ many }) => ({
-  listings: many(listings),
-  transactions: many(transactions, { relationName: "buyerTransactions" }),
-  sales: many(transactions, { relationName: "sellerTransactions" }),
-  verifications: many(verificationSubmissions)
-}));
-var listingsRelations = relations(listings, ({ one, many }) => ({
-  user: one(users, {
-    fields: [listings.userId],
-    references: [users.id]
-  }),
-  category: one(categories, {
-    fields: [listings.categoryId],
-    references: [categories.id]
-  }),
-  transactions: many(transactions)
-}));
-var transactionsRelations = relations(transactions, ({ one }) => ({
-  buyer: one(users, {
-    fields: [transactions.buyerId],
-    references: [users.id]
-  }),
-  seller: one(users, {
-    fields: [transactions.sellerId],
-    references: [users.id]
-  }),
-  listing: one(listings, {
-    fields: [transactions.listingId],
-    references: [listings.id]
-  }),
-  cart: one(carts, {
-    fields: [transactions.cartId],
-    references: [carts.id]
-  }),
-  logisticsPartner: one(logisticsPartners, {
-    fields: [transactions.logisticsPartnerId],
-    references: [logisticsPartners.id]
-  })
-}));
-var cartsRelations = relations(carts, ({ one, many }) => ({
-  user: one(users, {
-    fields: [carts.userId],
-    references: [users.id]
-  }),
-  items: many(cartItems),
-  transactions: many(transactions)
-}));
-var cartItemsRelations = relations(cartItems, ({ one }) => ({
-  cart: one(carts, {
-    fields: [cartItems.cartId],
-    references: [carts.id]
-  }),
-  listing: one(listings, {
-    fields: [cartItems.listingId],
-    references: [listings.id]
-  })
-}));
-var categoriesRelations = relations(categories, ({ many }) => ({
-  listings: many(listings)
-}));
-var companyConfigs = pgTable("company_configs", {
-  id: serial("id").primaryKey(),
-  email: text("email").notNull(),
-  phone: text("phone").notNull(),
-  location: text("location").notNull(),
-  commissionRate: real("commissionRate").default(0).notNull(),
-  // Platform commission percentage
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var paymentGateways = pgTable("payment_gateways", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  // e.g. 'esewa', 'khalti', 'fonepay', 'visa'
-  displayName: text("displayName").notNull(),
-  // e.g. 'eSewa', 'Khalti'
-  isActive: boolean("isActive").default(false).notNull(),
-  apiKey: text("apiKey"),
-  apiSecret: text("apiSecret"),
-  merchantId: text("merchantId"),
-  endpoint: text("endpoint"),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var reports = pgTable("reports", {
-  id: serial("id").primaryKey(),
-  reporterName: text("reporterName"),
-  reporterEmail: text("reporterEmail").notNull(),
-  subject: text("subject").notNull(),
-  description: text("description").notNull(),
-  status: text("status").default("pending").notNull(),
-  // pending, resolved
-  adminNotes: text("adminNotes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  resolvedAt: timestamp("resolvedAt")
-});
-var careers = pgTable("careers", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  department: text("department").notNull(),
-  location: text("location").notNull(),
-  salaryRange: text("salaryRange").notNull(),
-  type: text("type").notNull(),
-  // Full-Time, Part-Time, Hybrid, etc.
-  description: text("description").notNull(),
-  requirements: text("requirements"),
-  // newline separated
-  status: text("status").default("active").notNull(),
-  // active, closed
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var returns = pgTable("returns", {
-  id: serial("id").primaryKey(),
-  transactionId: integer("transactionId").notNull().references(() => transactions.id, { onDelete: "cascade" }),
-  buyerId: integer("buyerId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  sellerId: integer("sellerId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  reason: text("reason").notNull(),
-  description: text("description"),
-  images: jsonb("images"),
-  // Array of URLs
-  status: text("status").default("pending").notNull(),
-  // pending, approved, rejected, refunded
-  adminNotes: text("adminNotes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull()
-});
-var returnsRelations = relations(returns, ({ one }) => ({
-  transaction: one(transactions, {
-    fields: [returns.transactionId],
-    references: [transactions.id]
-  }),
-  buyer: one(users, {
-    fields: [returns.buyerId],
-    references: [users.id]
-  }),
-  seller: one(users, {
-    fields: [returns.sellerId],
-    references: [users.id]
-  })
-}));
-
-// backend/_core/crypto.ts
-import crypto from "crypto";
-var ALGORITHM = "aes-256-cbc";
-var DEFAULT_KEY = Buffer.from("f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9", "utf8");
-function getEncryptionKey() {
-  const envKey = process.env.MESSAGE_ENCRYPTION_KEY;
-  if (!envKey) {
-    return DEFAULT_KEY;
-  }
-  return crypto.createHash("sha256").update(envKey).digest();
-}
-function encryptMessage(text2) {
-  if (!text2) return "";
-  try {
-    const key = getEncryptionKey();
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-    let encrypted = cipher.update(text2, "utf8", "base64");
-    encrypted += cipher.final("base64");
-    return `ENC:${iv.toString("hex")}:${encrypted}`;
-  } catch (error) {
-    console.error("[Encryption] Failed to encrypt message:", error);
-    return text2;
-  }
-}
-function decryptMessage(encryptedText) {
-  if (!encryptedText || !encryptedText.startsWith("ENC:")) {
-    return encryptedText;
-  }
-  try {
-    const parts = encryptedText.split(":");
-    if (parts.length !== 3) {
-      return encryptedText;
-    }
-    const ivHex = parts[1];
-    const encryptedData = parts[2];
-    const key = getEncryptionKey();
-    const iv = Buffer.from(ivHex, "hex");
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-    let decrypted = decipher.update(encryptedData, "base64", "utf8");
-    decrypted += decipher.final("utf8");
-    return decrypted;
-  } catch (error) {
-    console.error("[Encryption] Failed to decrypt message:", error);
-    return encryptedText;
-  }
-}
-
-// backend/db.ts
-var rawConnectionString = process.env.DATABASE_URL;
-if (!rawConnectionString) {
-  writeDebugLog({
-    sessionId: "90368c",
-    runId: "debug_pre",
-    hypothesisId: "H1_env",
-    location: "backend/db.ts:database_url_missing",
-    message: "DATABASE_URL missing",
-    data: { DATABASE_URL_SET: false },
-    timestamp: Date.now()
-  });
-  throw new Error("DATABASE_URL environment variable is required for Postgres connection");
-}
-var _db = void 0;
-function initPostgres(connectionString) {
-  const sqlConnection = postgres(connectionString, {
-    ssl: { rejectUnauthorized: false }
-    // Use SSL by default for NeonDB compatibility
-  });
-  return pgDrizzle(sqlConnection, { schema: schema_exports });
-}
-try {
-  _db = initPostgres(rawConnectionString);
-  console.info("[Database] Initialized Postgres via DATABASE_URL");
-  writeDebugLog({
-    sessionId: "90368c",
-    runId: "debug_pre",
-    hypothesisId: "H3_db",
-    location: "backend/db.ts:db_init_success",
-    message: "DB initialized",
-    data: { DATABASE_URL_SET: true },
-    timestamp: Date.now()
-  });
-} catch (err) {
-  console.error("[Database] Failed to initialize Postgres DB:", err);
-  throw err;
-}
-var db = _db;
-async function getDb() {
-  return _db;
-}
-async function upsertUser(user) {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-  const db3 = await getDb();
-  if (!db3) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
-  try {
-    const values = {
-      openId: user.openId
-    };
-    const updateSet = {};
-    const textFields = ["name", "email", "loginMethod", "phone", "location", "bio", "avatar"];
-    const assignNullable = (field) => {
-      const value = user[field];
-      if (value === void 0) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-    textFields.forEach(assignNullable);
-    if (user.lastSignedIn !== void 0) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== void 0) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = "super_admin";
-      updateSet.role = "super_admin";
-    }
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = /* @__PURE__ */ new Date();
-    }
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = /* @__PURE__ */ new Date();
-    }
-    await db3.insert(users).values(values).onConflictDoUpdate({
-      target: users.openId,
-      set: updateSet
-    });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
-  }
-}
-async function getUserByOpenId(openId) {
-  const db3 = await getDb();
-  if (!db3) {
-    console.warn("[Database] Cannot get user: database not available");
-    return void 0;
-  }
-  const result = await db3.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return result.length > 0 ? result[0] : void 0;
-}
-async function getUserById(id) {
-  const db3 = await getDb();
-  if (!db3) return void 0;
-  const result = await db3.select().from(users).where(eq(users.id, id)).limit(1);
-  return result.length > 0 ? result[0] : void 0;
-}
-async function getListings(limit = 20, offset = 0) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  const results = await db3.select({
-    listing: listings,
-    seller: {
-      name: users.name,
-      avatar: users.avatar,
-      verificationStatus: users.verificationStatus
-    }
-  }).from(listings).leftJoin(users, eq(listings.userId, users.id)).where(and(
-    eq(listings.status, "active"),
-    gt(listings.stock, 0)
-  )).orderBy(desc(listings.createdAt)).limit(limit).offset(offset);
-  return results.map((row) => ({
-    ...row.listing,
-    seller: row.seller
-  }));
-}
-async function getListingById(id) {
-  const db3 = await getDb();
-  if (!db3) return void 0;
-  const results = await db3.select({
-    listing: listings,
-    seller: {
-      name: users.name,
-      avatar: users.avatar,
-      verificationStatus: users.verificationStatus
-    }
-  }).from(listings).leftJoin(users, eq(listings.userId, users.id)).where(eq(listings.id, id)).limit(1);
-  if (results.length === 0) return void 0;
-  return {
-    ...results[0].listing,
-    seller: results[0].seller
-  };
-}
-async function getUserListings(userId) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  return db3.select().from(listings).where(eq(listings.userId, userId)).orderBy(desc(listings.createdAt));
-}
-async function searchListings(query, limit = 20) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  const results = await db3.select({
-    listing: listings,
-    seller: {
-      name: users.name,
-      avatar: users.avatar,
-      verificationStatus: users.verificationStatus
-    }
-  }).from(listings).leftJoin(users, eq(listings.userId, users.id)).where(and(
-    eq(listings.status, "active"),
-    gt(listings.stock, 0),
-    like(listings.title, `%${query}%`)
-  )).orderBy(desc(listings.createdAt)).limit(limit);
-  return results.map((row) => ({
-    ...row.listing,
-    seller: row.seller
-  }));
-}
-function normalizeCategoryName(category) {
-  if (!category || typeof category.name !== "string") return category;
-  const normalized = category.name.replace(/\s+(Auctions?|Rentals?)$/i, "");
-  return normalized === category.name ? category : { ...category, name: normalized };
-}
-async function getCategories(sector) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  const rootCategoryQuery = db3.select().from(categories).where(and(
-    isNull(categories.parentId),
-    not(eq(categories.slug, "want-to-buy"))
-  ));
-  const mapResults = (rows2) => rows2.map(normalizeCategoryName);
-  if (sector) {
-    const categoryConditions = [
-      isNull(categories.parentId),
-      or(
-        eq(categories.sector, sector),
-        eq(categories.sector, "all")
-      ),
-      not(eq(categories.slug, "want-to-buy"))
-    ];
-    const rows2 = await db3.select().from(categories).where(and(...categoryConditions)).orderBy(categories.name);
-    return mapResults(rows2);
-  }
-  const rows = await rootCategoryQuery.orderBy(categories.name);
-  return mapResults(rows);
-}
-async function getSubcategories(parentId, sector) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  const mapResults = (rows2) => rows2.map(normalizeCategoryName);
-  if (sector) {
-    const rows2 = await db3.select().from(categories).where(and(
-      eq(categories.parentId, parentId),
-      or(
-        eq(categories.sector, sector),
-        eq(categories.sector, "all")
-      )
-    )).orderBy(categories.name);
-    return mapResults(rows2);
-  }
-  const rows = await db3.select().from(categories).where(eq(categories.parentId, parentId)).orderBy(categories.name);
-  return mapResults(rows);
-}
-async function getAuctions(limit = 20) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  const result = await db3.select({
-    auction: auctions,
-    listing: listings,
-    seller: users
-  }).from(auctions).innerJoin(listings, eq(auctions.listingId, listings.id)).innerJoin(users, eq(listings.userId, users.id)).orderBy(desc(auctions.endTime)).limit(limit);
-  return result.map((r) => ({
-    ...r.auction,
-    listing: {
-      title: r.listing.title,
-      description: r.listing.description,
-      price: r.listing.price,
-      images: r.listing.images,
-      location: r.listing.location,
-      category: r.listing.categoryId,
-      seller: {
-        name: r.seller.name,
-        isVerified: r.seller.isVerified,
-        rating: 4.5
-      }
-    }
-  }));
-}
-async function getAuctionById(id) {
-  const db3 = await getDb();
-  if (!db3) return void 0;
-  const result = await db3.select({
-    auction: auctions,
-    listing: listings,
-    seller: users
-  }).from(auctions).innerJoin(listings, eq(auctions.listingId, listings.id)).innerJoin(users, eq(listings.userId, users.id)).where(eq(auctions.id, id)).limit(1);
-  if (result.length === 0) return void 0;
-  return {
-    ...result[0].auction,
-    title: result[0].listing.title,
-    description: result[0].listing.description,
-    image: result[0].listing.images?.[0] || "",
-    location: result[0].listing.location,
-    sellerName: result[0].seller.name,
-    sellerRating: 4.8
-    // Default rating for now
-  };
-}
-async function getAuctionByListingId(listingId) {
-  const db3 = await getDb();
-  if (!db3) return void 0;
-  const result = await db3.select({
-    auction: auctions,
-    listing: listings,
-    seller: users
-  }).from(auctions).innerJoin(listings, eq(auctions.listingId, listings.id)).innerJoin(users, eq(listings.userId, users.id)).where(eq(auctions.listingId, listingId)).limit(1);
-  if (result.length === 0) return void 0;
-  return {
-    ...result[0].auction,
-    title: result[0].listing.title,
-    description: result[0].listing.description,
-    image: result[0].listing.images?.[0] || "",
-    location: result[0].listing.location,
-    sellerName: result[0].seller.name,
-    sellerRating: 4.8
-  };
-}
-async function getBidsForAuction(auctionId) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  return db3.select().from(bids).where(eq(bids.auctionId, auctionId)).orderBy(desc(bids.createdAt));
-}
-async function getConversations(userId) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  const results = await db3.select({
-    id: messages.id,
-    partnerId: sql`CASE WHEN ${messages.senderId} = ${userId} THEN ${messages.recipientId} ELSE ${messages.senderId} END`,
-    content: messages.content,
-    createdAt: messages.createdAt,
-    isRead: messages.isRead,
-    partnerName: users.name,
-    partnerAvatar: users.avatar,
-    listingId: messages.listingId
-  }).from(messages).innerJoin(users, eq(sql`CASE WHEN ${messages.senderId} = ${userId} THEN ${messages.recipientId} ELSE ${messages.senderId} END`, users.id)).where(or(
-    eq(messages.senderId, userId),
-    eq(messages.recipientId, userId)
-  )).orderBy(desc(messages.createdAt));
-  const uniqueConversations = [];
-  const seenPartners = /* @__PURE__ */ new Set();
-  for (const row of results) {
-    if (!seenPartners.has(row.partnerId)) {
-      seenPartners.add(row.partnerId);
-      row.content = decryptMessage(row.content);
-      uniqueConversations.push(row);
-    }
-  }
-  return uniqueConversations;
-}
-async function getMessages(userId1, userId2) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  const rows = await db3.select().from(messages).where(or(
-    and(eq(messages.senderId, userId1), eq(messages.recipientId, userId2)),
-    and(eq(messages.senderId, userId2), eq(messages.recipientId, userId1))
-  )).orderBy(messages.createdAt);
-  return rows.map((row) => ({
-    ...row,
-    content: decryptMessage(row.content)
-  }));
-}
-async function getUserFavorites(userId) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  const results = await db3.select({
-    id: favorites.id,
-    listingId: favorites.listingId,
-    title: listings.title,
-    price: listings.price,
-    image: listings.images,
-    location: listings.location,
-    createdAt: favorites.createdAt
-  }).from(favorites).innerJoin(listings, eq(favorites.listingId, listings.id)).where(eq(favorites.userId, userId));
-  return results.map((row) => ({
-    ...row,
-    image: row.image?.[0] || ""
-  }));
-}
-async function isFavorited(userId, listingId) {
-  const db3 = await getDb();
-  if (!db3) return false;
-  const result = await db3.select().from(favorites).where(and(
-    eq(favorites.userId, userId),
-    eq(favorites.listingId, listingId)
-  )).limit(1);
-  return result.length > 0;
-}
-async function getUserBookings(userId) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  const results = await db3.select({
-    id: bookings.id,
-    listingId: bookings.listingId,
-    title: listings.title,
-    startDate: bookings.startDate,
-    endDate: bookings.endDate,
-    totalPrice: bookings.totalPrice,
-    status: bookings.status,
-    image: listings.images
-  }).from(bookings).innerJoin(listings, eq(bookings.listingId, listings.id)).where(eq(bookings.userId, userId)).orderBy(desc(bookings.createdAt));
-  return results.map((row) => ({
-    ...row,
-    image: row.image?.[0] || ""
-  }));
-}
-async function getListingBookings(listingId) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  return db3.select().from(bookings).where(eq(bookings.listingId, listingId)).orderBy(desc(bookings.createdAt));
-}
-async function getUserTransactions(userId) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  const results = await db3.select({
-    id: transactions.id,
-    orderId: transactions.orderId,
-    buyerId: transactions.buyerId,
-    sellerId: transactions.sellerId,
-    listingId: transactions.listingId,
-    amount: transactions.amount,
-    status: transactions.status,
-    paymentMethod: transactions.paymentMethod,
-    transactionType: transactions.transactionType,
-    deliveryName: transactions.deliveryName,
-    deliveryAddress: transactions.deliveryAddress,
-    deliveryPhone: transactions.deliveryPhone,
-    deliveryEmail: transactions.deliveryEmail,
-    deliverySpeed: transactions.deliverySpeed,
-    deliveryFee: transactions.deliveryFee,
-    estDeliveryDate: transactions.estDeliveryDate,
-    createdAt: transactions.createdAt,
-    title: listings.title,
-    image: listings.images
-  }).from(transactions).innerJoin(listings, eq(transactions.listingId, listings.id)).where(eq(transactions.buyerId, userId)).orderBy(desc(transactions.createdAt));
-  return results.map((row) => ({
-    ...row,
-    image: row.image?.[0] || ""
-  }));
-}
-async function getSellerTransactions(userId) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  const results = await db3.select({
-    id: transactions.id,
-    orderId: transactions.orderId,
-    buyerId: transactions.buyerId,
-    sellerId: transactions.sellerId,
-    listingId: transactions.listingId,
-    amount: transactions.amount,
-    status: transactions.status,
-    paymentMethod: transactions.paymentMethod,
-    deliveryName: transactions.deliveryName,
-    deliveryAddress: transactions.deliveryAddress,
-    deliveryPhone: transactions.deliveryPhone,
-    deliveryEmail: transactions.deliveryEmail,
-    deliverySpeed: transactions.deliverySpeed,
-    deliveryFee: transactions.deliveryFee,
-    estDeliveryDate: transactions.estDeliveryDate,
-    createdAt: transactions.createdAt,
-    title: listings.title,
-    image: listings.images
-  }).from(transactions).innerJoin(listings, eq(transactions.listingId, listings.id)).where(eq(transactions.sellerId, userId)).orderBy(desc(transactions.createdAt));
-  return results.map((row) => ({
-    ...row,
-    image: row.image?.[0] || ""
-  }));
-}
-async function getUserNotifications(userId) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  return db3.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
-}
-async function submitReview(fromUserId, toUserId, data) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  const result = await db3.insert(reviews).values({
-    fromUserId,
-    toUserId,
-    listingId: data.listingId,
-    transactionId: data.transactionId,
-    rating: Math.max(1, Math.min(5, data.rating)),
-    title: data.title,
-    comment: data.comment,
-    isVerifiedPurchase: data.isVerifiedPurchase || false
-  }).returning({ insertId: reviews.id });
-  await updateReviewAnalytics(toUserId);
-  return result;
-}
-async function getReviewById(reviewId) {
-  const db3 = await getDb();
-  if (!db3) return void 0;
-  const result = await db3.select().from(reviews).where(eq(reviews.id, reviewId)).limit(1);
-  return result.length > 0 ? result[0] : void 0;
-}
-async function getUserReceivedReviews(userId, limit = 20, offset = 0) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  return db3.select().from(reviews).where(and(
-    eq(reviews.toUserId, userId),
-    eq(reviews.status, "approved")
-  )).orderBy(desc(reviews.createdAt)).limit(limit).offset(offset);
-}
-async function getUserGivenReviews(userId, limit = 20, offset = 0) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  return db3.select().from(reviews).where(eq(reviews.fromUserId, userId)).orderBy(desc(reviews.createdAt)).limit(limit).offset(offset);
-}
-async function updateReviewStatus(reviewId, status) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  const review = await getReviewById(reviewId);
-  if (!review) throw new Error("Review not found");
-  await db3.update(reviews).set({ status, updatedAt: /* @__PURE__ */ new Date() }).where(eq(reviews.id, reviewId));
-  if (status === "approved" || review.status === "approved") {
-    await updateReviewAnalytics(review.toUserId);
-  }
-}
-async function addSellerResponse(reviewId, response) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  return db3.update(reviews).set({
-    sellerResponse: response,
-    sellerResponseAt: /* @__PURE__ */ new Date(),
-    updatedAt: /* @__PURE__ */ new Date()
-  }).where(eq(reviews.id, reviewId));
-}
-async function markReviewHelpful(reviewId, userId, isHelpful) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  const existing = await db3.select().from(reviewHelpfulVotes).where(and(
-    eq(reviewHelpfulVotes.reviewId, reviewId),
-    eq(reviewHelpfulVotes.userId, userId)
-  )).limit(1);
-  if (existing.length > 0) {
-    await db3.update(reviewHelpfulVotes).set({ isHelpful }).where(and(
-      eq(reviewHelpfulVotes.reviewId, reviewId),
-      eq(reviewHelpfulVotes.userId, userId)
-    ));
-  } else {
-    await db3.insert(reviewHelpfulVotes).values({
-      reviewId,
-      userId,
-      isHelpful
-    });
-  }
-  const votes = await db3.select().from(reviewHelpfulVotes).where(eq(reviewHelpfulVotes.reviewId, reviewId));
-  const helpfulCount = votes.filter((v) => v.isHelpful).length;
-  const unhelpfulCount = votes.filter((v) => !v.isHelpful).length;
-  return db3.update(reviews).set({
-    helpfulCount,
-    unhelpfulCount,
-    updatedAt: /* @__PURE__ */ new Date()
-  }).where(eq(reviews.id, reviewId));
-}
-async function flagReview(reviewId, flaggedByUserId, reason, description) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  await db3.insert(flaggedReviews).values({
-    reviewId,
-    flaggedByUserId,
-    reason,
-    description
-  });
-  return db3.update(reviews).set({ status: "flagged", updatedAt: /* @__PURE__ */ new Date() }).where(eq(reviews.id, reviewId));
-}
-async function getFlaggedReviews(limit = 20, offset = 0) {
-  const db3 = await getDb();
-  if (!db3) return [];
-  return db3.select().from(flaggedReviews).where(eq(flaggedReviews.status, "pending")).orderBy(desc(flaggedReviews.createdAt)).limit(limit).offset(offset);
-}
-async function resolveFlaggedReview(flaggedReviewId, adminId, status, adminNotes) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  const flaggedReview = await db3.select().from(flaggedReviews).where(eq(flaggedReviews.id, flaggedReviewId)).limit(1);
-  if (flaggedReview.length === 0) throw new Error("Flagged review not found");
-  await db3.update(flaggedReviews).set({
-    status,
-    reviewedByAdminId: adminId,
-    adminNotes,
-    resolvedAt: /* @__PURE__ */ new Date()
-  }).where(eq(flaggedReviews.id, flaggedReviewId));
-  if (status === "removed") {
-    const review = await getReviewById(flaggedReview[0].reviewId);
-    if (review) {
-      await db3.update(reviews).set({ status: "rejected", updatedAt: /* @__PURE__ */ new Date() }).where(eq(reviews.id, flaggedReview[0].reviewId));
-      await updateReviewAnalytics(review.toUserId);
-    }
-  }
-}
-async function getUserReviewAnalytics(userId) {
-  const db3 = await getDb();
-  if (!db3) return void 0;
-  let analytics = await db3.select().from(reviewAnalytics).where(eq(reviewAnalytics.userId, userId)).limit(1);
-  if (analytics.length === 0) {
-    await db3.insert(reviewAnalytics).values({
-      userId,
-      totalReviews: 0,
-      averageRating: 0
-    });
-    analytics = await db3.select().from(reviewAnalytics).where(eq(reviewAnalytics.userId, userId)).limit(1);
-  }
-  return analytics[0];
-}
-async function updateReviewAnalytics(userId) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  const userReviews = await db3.select().from(reviews).where(and(
-    eq(reviews.toUserId, userId),
-    eq(reviews.status, "approved")
-  ));
-  if (userReviews.length === 0) {
-    return db3.update(reviewAnalytics).set({
-      totalReviews: 0,
-      averageRating: 0,
-      fiveStarCount: 0,
-      fourStarCount: 0,
-      threeStarCount: 0,
-      twoStarCount: 0,
-      oneStarCount: 0,
-      updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq(reviewAnalytics.userId, userId));
-  }
-  const totalReviews = userReviews.length;
-  const averageRating = userReviews.reduce((sum2, r) => sum2 + r.rating, 0) / totalReviews;
-  const fiveStarCount = userReviews.filter((r) => r.rating === 5).length;
-  const fourStarCount = userReviews.filter((r) => r.rating === 4).length;
-  const threeStarCount = userReviews.filter((r) => r.rating === 3).length;
-  const twoStarCount = userReviews.filter((r) => r.rating === 2).length;
-  const oneStarCount = userReviews.filter((r) => r.rating === 1).length;
-  const verifiedPurchaseCount = userReviews.filter((r) => r.isVerifiedPurchase).length;
-  const lastReviewDate = userReviews[0]?.createdAt;
-  return db3.update(reviewAnalytics).set({
-    totalReviews,
-    averageRating: Math.round(averageRating * 100) / 100,
-    fiveStarCount,
-    fourStarCount,
-    threeStarCount,
-    twoStarCount,
-    oneStarCount,
-    verifiedPurchaseCount,
-    lastReviewDate,
-    updatedAt: /* @__PURE__ */ new Date()
-  }).where(eq(reviewAnalytics.userId, userId));
-}
-async function deleteReview(reviewId) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  const review = await getReviewById(reviewId);
-  if (!review) throw new Error("Review not found");
-  await db3.delete(reviewHelpfulVotes).where(eq(reviewHelpfulVotes.reviewId, reviewId));
-  await db3.delete(flaggedReviews).where(eq(flaggedReviews.reviewId, reviewId));
-  await db3.delete(reviews).where(eq(reviews.id, reviewId));
-  await updateReviewAnalytics(review.toUserId);
-}
-async function getCompanyConfig() {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  const results = await db3.select().from(companyConfigs).limit(1);
-  if (results.length > 0) return results[0];
-  const defaultConfig = {
-    id: 1,
-    email: "support@sasto.com",
-    phone: "+977-1-4123456",
-    location: "New Baneshwor, Kathmandu",
-    commissionRate: 0,
-    updatedAt: /* @__PURE__ */ new Date()
-  };
-  try {
-    await db3.insert(companyConfigs).values(defaultConfig);
-  } catch (e) {
-    console.error("Seeding companyConfigs failed", e);
-  }
-  return defaultConfig;
-}
-async function updateCompanyConfig(data) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  const active = await getCompanyConfig();
-  const updateData = { updatedAt: /* @__PURE__ */ new Date() };
-  if (data.email !== void 0) updateData.email = data.email;
-  if (data.phone !== void 0) updateData.phone = data.phone;
-  if (data.location !== void 0) updateData.location = data.location;
-  if (data.commissionRate !== void 0) updateData.commissionRate = data.commissionRate;
-  await db3.update(companyConfigs).set(updateData).where(eq(companyConfigs.id, active.id));
-  return { ...active, ...updateData };
-}
-async function submitReport(data) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  return db3.insert(reports).values({
-    reporterName: data.reporterName || null,
-    reporterEmail: data.reporterEmail,
-    subject: data.subject,
-    description: data.description,
-    status: "pending",
-    createdAt: /* @__PURE__ */ new Date()
-  }).returning({ insertId: reports.id });
-}
-async function getAllReports() {
-  const db3 = await getDb();
-  if (!db3) return [];
-  return db3.select().from(reports).orderBy(desc(reports.createdAt));
-}
-async function resolveReport(reportId, adminNotes) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  return db3.update(reports).set({ status: "resolved", adminNotes: adminNotes || null, resolvedAt: /* @__PURE__ */ new Date() }).where(eq(reports.id, reportId));
-}
-async function getCareers() {
-  const db3 = await getDb();
-  if (!db3) return [];
-  return db3.select().from(careers).where(eq(careers.status, "active")).orderBy(desc(careers.createdAt));
-}
-async function createCareerOpening(data) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  return db3.insert(careers).values({
-    title: data.title,
-    department: data.department,
-    location: data.location,
-    salaryRange: data.salaryRange,
-    type: data.type,
-    description: data.description,
-    requirements: data.requirements || null,
-    status: "active",
-    createdAt: /* @__PURE__ */ new Date()
-  }).returning({ insertId: careers.id });
-}
-async function archiveCareerOpening(id) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  return db3.update(careers).set({ status: "closed" }).where(eq(careers.id, id));
-}
-async function getPaymentGateways() {
-  const db3 = await getDb();
-  if (!db3) return [];
-  let gateways = await db3.select().from(paymentGateways).orderBy(paymentGateways.name);
-  if (gateways.length === 0) {
-    const defaults = [
-      { name: "esewa", displayName: "eSewa Mobile Wallet", isActive: false, updatedAt: /* @__PURE__ */ new Date() },
-      { name: "khalti", displayName: "Khalti", isActive: false, updatedAt: /* @__PURE__ */ new Date() },
-      { name: "visa", displayName: "Visa / Mastercard", isActive: false, updatedAt: /* @__PURE__ */ new Date() },
-      { name: "fonepay", displayName: "Fonepay", isActive: false, updatedAt: /* @__PURE__ */ new Date() }
-    ];
-    for (const gw of defaults) {
-      await db3.insert(paymentGateways).values(gw);
-    }
-    gateways = await db3.select().from(paymentGateways).orderBy(paymentGateways.name);
-  }
-  return gateways;
-}
-async function getActivePaymentGateways() {
-  const db3 = await getDb();
-  if (!db3) return [];
-  return db3.select({
-    id: paymentGateways.id,
-    name: paymentGateways.name,
-    displayName: paymentGateways.displayName,
-    isActive: paymentGateways.isActive
-  }).from(paymentGateways).where(eq(paymentGateways.isActive, true));
-}
-async function updatePaymentGateway(name, data) {
-  const db3 = await getDb();
-  if (!db3) throw new Error("Database not available");
-  const existing = await db3.select().from(paymentGateways).where(eq(paymentGateways.name, name)).limit(1);
-  if (existing.length === 0) {
-    await db3.insert(paymentGateways).values({
-      name,
-      displayName: data.displayName || name,
-      isActive: data.isActive || false,
-      apiKey: data.apiKey,
-      apiSecret: data.apiSecret,
-      merchantId: data.merchantId,
-      endpoint: data.endpoint,
-      updatedAt: /* @__PURE__ */ new Date()
-    });
-  } else {
-    await db3.update(paymentGateways).set({ ...data, updatedAt: /* @__PURE__ */ new Date() }).where(eq(paymentGateways.name, name));
-  }
-}
-
 // backend/_core/systemRouter.ts
+init_db();
+init_schema();
 import { count, eq as eq2 } from "drizzle-orm";
 var systemRouter = router({
   health: publicProcedure.input(
@@ -2085,7 +2214,12 @@ var systemRouter = router({
   })
 });
 
+// backend/routers/index.ts
+init_db();
+
 // backend/_core/emailService.ts
+init_db();
+init_schema();
 import { eq as eq3 } from "drizzle-orm";
 var EmailService = class {
   apiKey;
@@ -2388,9 +2522,14 @@ var emailService = new EmailService();
 
 // backend/routers/index.ts
 init_websocket();
-import { eq as eq13, desc as desc8, and as and9 } from "drizzle-orm";
+init_db();
+init_schema();
+init_crypto();
+import { eq as eq14, desc as desc9, and as and10 } from "drizzle-orm";
 
 // backend/routers/seller.ts
+init_schema();
+init_db();
 import { z as z2 } from "zod";
 import { eq as eq4, and as and2, gte as gte2, lte as lte2, desc as desc2, count as count2, sum, avg } from "drizzle-orm";
 import { TRPCError as TRPCError3 } from "@trpc/server";
@@ -2670,6 +2809,9 @@ var sellerRouter = router({
 
 // backend/routers/admin.ts
 import { z as z3 } from "zod";
+init_crypto();
+init_db();
+init_schema();
 import { TRPCError as TRPCError4 } from "@trpc/server";
 import { eq as eq5, desc as desc3, sql as sql2, gte as gte3, and as and3, or as or2 } from "drizzle-orm";
 var adminRouter = router({
@@ -3185,10 +3327,10 @@ var adminRouter = router({
     }).from(transactions).innerJoin(listings, eq5(transactions.listingId, listings.id)).innerJoin(categories, eq5(listings.categoryId, categories.id)).groupBy(categories.name).orderBy(desc3(sql2`sum(${transactions.amount})`));
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3);
     const dailyTrends = await db3.select({
-      date: sql2`date(${transactions.createdAt}, 'unixepoch')`,
+      date: sql2`to_char(${transactions.createdAt}, 'YYYY-MM-DD')`,
       revenue: sql2`sum(${transactions.amount})`,
       orders: sql2`count(${transactions.id})`
-    }).from(transactions).where(gte3(transactions.createdAt, thirtyDaysAgo)).groupBy(sql2`date(${transactions.createdAt}, 'unixepoch')`).orderBy(sql2`date(${transactions.createdAt}, 'unixepoch')`);
+    }).from(transactions).where(gte3(transactions.createdAt, thirtyDaysAgo)).groupBy(sql2`to_char(${transactions.createdAt}, 'YYYY-MM-DD')`).orderBy(sql2`to_char(${transactions.createdAt}, 'YYYY-MM-DD')`);
     return {
       summary: {
         totalRevenue,
@@ -3494,6 +3636,8 @@ function requireAdmin(ctx) {
 }
 
 // backend/routers/rbac.ts
+init_db();
+init_schema();
 import { eq as eq6, and as and4 } from "drizzle-orm";
 var rbacRouter = router({
   // Get all roles with their permissions
@@ -3639,6 +3783,8 @@ var rbacRouter = router({
 // backend/routers/ads.ts
 import { z as z5 } from "zod";
 import { sql as sql3 } from "drizzle-orm";
+init_db();
+init_schema();
 import { TRPCError as TRPCError6 } from "@trpc/server";
 import { eq as eq7, and as and5, gte as gte4, lte as lte3, desc as desc4, gt as gt2 } from "drizzle-orm";
 var adsRouter = router({
@@ -4036,6 +4182,8 @@ var adsRouter = router({
 });
 
 // backend/routers/emails.ts
+init_db();
+init_schema();
 import { z as z6 } from "zod";
 import { eq as eq8 } from "drizzle-orm";
 var emailsRouter = router({
@@ -4167,6 +4315,7 @@ import "dotenv/config";
 
 // backend/routers/reviews.ts
 import { z as z7 } from "zod";
+init_db();
 var reviewsRouter = router({
   // Submit a new review
   submit: protectedProcedure.input(z7.object({
@@ -4301,6 +4450,7 @@ var reviewsRouter = router({
 
 // backend/routers/rentals.ts
 import { z as z8 } from "zod";
+init_db();
 var rentalsRouter = router({
   list: publicProcedure.input(z8.object({
     category: z8.string().optional(),
@@ -4328,6 +4478,7 @@ var rentalsRouter = router({
 });
 
 // backend/routers/search.ts
+init_db();
 import { z as z9 } from "zod";
 import { sql as sql4 } from "drizzle-orm";
 var searchRouter = router({
@@ -4341,9 +4492,9 @@ var searchRouter = router({
     try {
       const db3 = await getDb();
       const listings3 = await db3.query.listings.findMany({
-        where: (listings4, { like: like2, and: and11, eq: eq17 }) => and11(
+        where: (listings4, { like: like2, and: and12, eq: eq18 }) => and12(
           like2(listings4.title, searchTerm),
-          eq17(listings4.status, "active")
+          eq18(listings4.status, "active")
         ),
         columns: {
           id: true,
@@ -4407,13 +4558,13 @@ var searchRouter = router({
     try {
       const db3 = await getDb();
       const listings3 = await db3.query.listings.findMany({
-        where: (listings4, { like: like2, and: and11, eq: eq17, gte: gte6, lte: lte5 }) => {
-          const conditions = [eq17(listings4.status, "active")];
+        where: (listings4, { like: like2, and: and12, eq: eq18, gte: gte6, lte: lte5 }) => {
+          const conditions = [eq18(listings4.status, "active")];
           if (query) {
             conditions.push(like2(listings4.title, `%${query}%`));
           }
           if (category) {
-            conditions.push(eq17(listings4.categoryId, category));
+            conditions.push(eq18(listings4.categoryId, category));
           }
           if (minPrice !== void 0) {
             conditions.push(gte6(listings4.price, minPrice));
@@ -4425,7 +4576,7 @@ var searchRouter = router({
             conditions.push(like2(listings4.location, `%${location}%`));
           }
           if (district) {
-            conditions.push(eq17(listings4.district, district));
+            conditions.push(eq18(listings4.district, district));
           }
           if (brand) {
             conditions.push(like2(listings4.brand, `%${brand}%`));
@@ -4434,12 +4585,12 @@ var searchRouter = router({
             conditions.push(like2(listings4.model, `%${model}%`));
           }
           if (color) {
-            conditions.push(eq17(listings4.color, color));
+            conditions.push(eq18(listings4.color, color));
           }
           if (condition) {
-            conditions.push(eq17(listings4.condition, condition));
+            conditions.push(eq18(listings4.condition, condition));
           }
-          return and11(...conditions);
+          return and12(...conditions);
         },
         with: {
           user: {
@@ -4452,17 +4603,17 @@ var searchRouter = router({
         },
         limit,
         offset,
-        orderBy: (listings4, { desc: desc10, asc: asc2 }) => {
+        orderBy: (listings4, { desc: desc11, asc: asc2 }) => {
           switch (sortBy) {
             case "price-low":
               return asc2(listings4.price);
             case "price-high":
-              return desc10(listings4.price);
+              return desc11(listings4.price);
             case "popular":
-              return desc10(listings4.views);
+              return desc11(listings4.views);
             case "newest":
             default:
-              return desc10(listings4.createdAt);
+              return desc11(listings4.createdAt);
           }
         }
       });
@@ -4546,6 +4697,8 @@ var searchRouter = router({
 });
 
 // backend/routers/seller-analytics.ts
+init_db();
+init_schema();
 import { z as z10 } from "zod";
 import { eq as eq9, gte as gte5, and as and6, desc as desc5 } from "drizzle-orm";
 var sellerAnalyticsRouter = router({
@@ -4791,6 +4944,8 @@ var sellerAnalyticsRouter = router({
 
 // backend/routers/deals.ts
 import { z as z11 } from "zod";
+init_db();
+init_schema();
 import { TRPCError as TRPCError7 } from "@trpc/server";
 import { eq as eq10, and as and7, desc as desc6, isNotNull as isNotNull2 } from "drizzle-orm";
 var dealsRouter = router({
@@ -4897,6 +5052,8 @@ var dealsRouter = router({
 
 // backend/routers/verification.ts
 import { z as z12 } from "zod";
+init_db();
+init_schema();
 import { eq as eq11, desc as desc7 } from "drizzle-orm";
 import { TRPCError as TRPCError8 } from "@trpc/server";
 var verificationRouter = router({
@@ -4966,6 +5123,8 @@ var verificationRouter = router({
 // backend/routers/cart.ts
 import { z as z13 } from "zod";
 import { TRPCError as TRPCError9 } from "@trpc/server";
+init_db();
+init_schema();
 import { eq as eq12, and as and8 } from "drizzle-orm";
 var cartRouter = router({
   get: protectedProcedure.query(async ({ ctx }) => {
@@ -5092,6 +5251,140 @@ var cartRouter = router({
   })
 });
 
+// backend/routers/returns.ts
+import { z as z14 } from "zod";
+init_db();
+init_schema();
+import { TRPCError as TRPCError10 } from "@trpc/server";
+import { eq as eq13, desc as desc8, sql as sql6 } from "drizzle-orm";
+var returnsRouter = router({
+  requestReturn: protectedProcedure.input(z14.object({
+    transactionId: z14.number(),
+    reason: z14.string(),
+    description: z14.string().optional(),
+    images: z14.array(z14.string()).optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db3 = await getDb();
+    if (!db3) throw new TRPCError10({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const txRes = await db3.select().from(transactions).where(eq13(transactions.id, input.transactionId));
+    if (!txRes.length) throw new TRPCError10({ code: "NOT_FOUND", message: "Transaction not found" });
+    const tx = txRes[0];
+    if (tx.buyerId !== ctx.user.id) {
+      throw new TRPCError10({ code: "FORBIDDEN", message: "Not authorized to return this transaction" });
+    }
+    if (tx.status !== "completed" && tx.status !== "delivered") {
+      throw new TRPCError10({ code: "BAD_REQUEST", message: "Can only return completed or delivered items" });
+    }
+    const existing = await db3.select().from(returns).where(eq13(returns.transactionId, tx.id));
+    if (existing.length > 0) {
+      throw new TRPCError10({ code: "BAD_REQUEST", message: "Return already requested for this transaction" });
+    }
+    const newReturn = await db3.insert(returns).values({
+      transactionId: tx.id,
+      buyerId: tx.buyerId,
+      sellerId: tx.sellerId,
+      reason: input.reason,
+      description: input.description,
+      images: input.images || [],
+      status: "pending",
+      createdAt: /* @__PURE__ */ new Date(),
+      updatedAt: /* @__PURE__ */ new Date()
+    }).returning();
+    const listingRes = await db3.select({ title: listings.title }).from(listings).where(eq13(listings.id, tx.listingId));
+    const listingTitle = listingRes.length ? listingRes[0].title : "Product";
+    await db3.insert(notifications).values({
+      userId: tx.sellerId,
+      type: "return_request",
+      title: "New Return Request",
+      content: `A return has been requested for "${listingTitle}" by the buyer. Reason: ${input.reason}`,
+      relatedId: newReturn[0].id,
+      isRead: false,
+      createdAt: /* @__PURE__ */ new Date()
+    });
+    return { success: true, returnRequest: newReturn[0] };
+  }),
+  getBuyerReturns: protectedProcedure.query(async ({ ctx }) => {
+    const db3 = await getDb();
+    if (!db3) throw new TRPCError10({ code: "INTERNAL_SERVER_ERROR" });
+    const seller = db3.select().from(users).as("seller");
+    const res = await db3.select({
+      id: returns.id,
+      transactionId: returns.transactionId,
+      reason: returns.reason,
+      description: returns.description,
+      status: returns.status,
+      images: returns.images,
+      adminNotes: returns.adminNotes,
+      createdAt: returns.createdAt,
+      updatedAt: returns.updatedAt,
+      listingTitle: listings.title,
+      listingImage: listings.images,
+      sellerName: sql6`seller.name`,
+      sellerBusinessName: sql6`seller."businessName"`
+    }).from(returns).leftJoin(transactions, eq13(transactions.id, returns.transactionId)).leftJoin(listings, eq13(listings.id, transactions.listingId)).leftJoin(seller, eq13(sql6`seller.id`, transactions.sellerId)).where(eq13(returns.buyerId, ctx.user.id)).orderBy(desc8(returns.createdAt));
+    return res;
+  }),
+  getSellerReturns: protectedProcedure.query(async ({ ctx }) => {
+    const db3 = await getDb();
+    if (!db3) throw new TRPCError10({ code: "INTERNAL_SERVER_ERROR" });
+    const buyer = db3.select().from(users).as("buyer");
+    const res = await db3.select({
+      id: returns.id,
+      transactionId: returns.transactionId,
+      reason: returns.reason,
+      description: returns.description,
+      status: returns.status,
+      images: returns.images,
+      adminNotes: returns.adminNotes,
+      createdAt: returns.createdAt,
+      updatedAt: returns.updatedAt,
+      listingTitle: listings.title,
+      listingImage: listings.images,
+      buyerName: sql6`buyer.name`,
+      buyerEmail: sql6`buyer.email`
+    }).from(returns).leftJoin(transactions, eq13(transactions.id, returns.transactionId)).leftJoin(listings, eq13(listings.id, transactions.listingId)).leftJoin(buyer, eq13(sql6`buyer.id`, transactions.buyerId)).where(eq13(returns.sellerId, ctx.user.id)).orderBy(desc8(returns.createdAt));
+    return res;
+  }),
+  updateStatus: protectedProcedure.input(z14.object({
+    returnId: z14.number(),
+    status: z14.enum(["approved", "rejected", "refunded"]),
+    adminNotes: z14.string().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db3 = await getDb();
+    if (!db3) throw new TRPCError10({ code: "INTERNAL_SERVER_ERROR" });
+    const returnReqRes = await db3.select().from(returns).where(eq13(returns.id, input.returnId));
+    if (!returnReqRes.length) throw new TRPCError10({ code: "NOT_FOUND", message: "Return not found" });
+    const returnReq = returnReqRes[0];
+    const isSeller = returnReq.sellerId === ctx.user.id;
+    const isAdmin2 = ctx.user.role === "admin" || ctx.user.role === "super_admin";
+    if (!isSeller && !isAdmin2) {
+      throw new TRPCError10({ code: "FORBIDDEN", message: "Not authorized" });
+    }
+    if (input.status === "refunded" && !isAdmin2) {
+      throw new TRPCError10({ code: "FORBIDDEN", message: "Only admin can process refunds" });
+    }
+    await db3.update(returns).set({
+      status: input.status,
+      adminNotes: input.adminNotes || returnReq.adminNotes,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq13(returns.id, input.returnId));
+    if (input.status === "refunded") {
+      await db3.update(transactions).set({ status: "refunded", updatedAt: /* @__PURE__ */ new Date() }).where(eq13(transactions.id, returnReq.transactionId));
+    }
+    const statusText = input.status === "approved" ? "approved" : input.status === "rejected" ? "rejected" : "refunded";
+    await db3.insert(notifications).values({
+      userId: returnReq.buyerId,
+      type: "return_update",
+      title: `Return Request ${statusText.charAt(0).toUpperCase() + statusText.slice(1)}`,
+      content: `Your return request for transaction #${returnReq.transactionId} has been ${statusText}.`,
+      relatedId: returnReq.id,
+      isRead: false,
+      createdAt: /* @__PURE__ */ new Date()
+    });
+    return { success: true };
+  })
+});
+
 // backend/inngest/client.ts
 import { Inngest } from "inngest";
 var inngest = new Inngest({ id: "sasto-marketplace" });
@@ -5108,47 +5401,47 @@ var appRouter = router({
       console.log(`[Auth] me query called, User: ${opts.ctx.user?.email || "Guest"}`);
       return opts.ctx.user;
     }),
-    updateProfile: protectedProcedure.input(z14.object({
-      name: z14.string().optional(),
-      email: z14.string().email().optional(),
-      phone: z14.string().optional(),
-      location: z14.string().optional(),
-      bio: z14.string().optional(),
-      avatar: z14.string().optional(),
-      businessName: z14.string().optional(),
-      businessLicense: z14.string().optional(),
-      experienceYears: z14.number().optional(),
-      specialties: z14.string().optional(),
-      socialLinks: z14.string().optional(),
-      bannerImage: z14.string().optional()
+    updateProfile: protectedProcedure.input(z15.object({
+      name: z15.string().optional(),
+      email: z15.string().email().optional(),
+      phone: z15.string().optional(),
+      location: z15.string().optional(),
+      bio: z15.string().optional(),
+      avatar: z15.string().optional(),
+      businessName: z15.string().optional(),
+      businessLicense: z15.string().optional(),
+      experienceYears: z15.number().optional(),
+      specialties: z15.string().optional(),
+      socialLinks: z15.string().optional(),
+      bannerImage: z15.string().optional()
     })).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
       await db3.update(users).set({
         ...input,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq13(users.id, ctx.user.id));
+      }).where(eq14(users.id, ctx.user.id));
       return { success: true };
     })
   }),
   // Listings
   listings: router({
-    list: publicProcedure.input(z14.object({
-      limit: z14.number().default(20),
-      offset: z14.number().default(0),
-      type: z14.enum(["marketplace", "auction", "rental"]).optional()
+    list: publicProcedure.input(z15.object({
+      limit: z15.number().default(20),
+      offset: z15.number().default(0),
+      type: z15.enum(["marketplace", "auction", "rental"]).optional()
     })).query(async ({ input }) => {
       return getListings(input.limit, input.offset);
     }),
-    getById: publicProcedure.input(z14.number()).query(async ({ input }) => {
+    getById: publicProcedure.input(z15.number()).query(async ({ input }) => {
       return getListingById(input);
     }),
-    search: publicProcedure.input(z14.object({
-      searchQuery: z14.string().optional(),
-      query: z14.string().optional(),
-      limit: z14.number().default(20),
-      category: z14.string().optional(),
-      condition: z14.string().optional()
+    search: publicProcedure.input(z15.object({
+      searchQuery: z15.string().optional(),
+      query: z15.string().optional(),
+      limit: z15.number().default(20),
+      category: z15.string().optional(),
+      condition: z15.string().optional()
     })).query(async ({ input }) => {
       const q = input.searchQuery || input.query || "";
       return searchListings(q, input.limit);
@@ -5156,49 +5449,49 @@ var appRouter = router({
     myListings: protectedProcedure.query(async ({ ctx }) => {
       return getUserListings(ctx.user.id);
     }),
-    getByUserId: publicProcedure.input(z14.number()).query(async ({ input }) => {
+    getByUserId: publicProcedure.input(z15.number()).query(async ({ input }) => {
       return getUserListings(input);
     }),
-    getFeatured: publicProcedure.input(z14.object({ limit: z14.number().default(8) })).query(async ({ input }) => {
+    getFeatured: publicProcedure.input(z15.object({ limit: z15.number().default(8) })).query(async ({ input }) => {
       const db3 = await getDb();
       if (!db3) return [];
       const now = /* @__PURE__ */ new Date();
-      const featured = await db3.select().from(listings).where(eq13(listings.isFeatured, true)).orderBy(desc8(listings.createdAt)).limit(input.limit);
+      const featured = await db3.select().from(listings).where(eq14(listings.isFeatured, true)).orderBy(desc9(listings.createdAt)).limit(input.limit);
       return featured;
     }),
-    promoteListing: protectedProcedure.input(z14.object({
-      listingId: z14.number(),
-      durationDays: z14.number().default(7)
+    promoteListing: protectedProcedure.input(z15.object({
+      listingId: z15.number(),
+      durationDays: z15.number().default(7)
     })).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
-      const [listing] = await db3.select().from(listings).where(eq13(listings.id, input.listingId));
+      const [listing] = await db3.select().from(listings).where(eq14(listings.id, input.listingId));
       if (!listing || listing.userId !== ctx.user.id) {
-        throw new TRPCError10({ code: "FORBIDDEN", message: "Not your listing" });
+        throw new TRPCError11({ code: "FORBIDDEN", message: "Not your listing" });
       }
       const featuredUntil = new Date(Date.now() + input.durationDays * 24 * 60 * 60 * 1e3);
-      await db3.update(listings).set({ isFeatured: true, featuredUntil, updatedAt: /* @__PURE__ */ new Date() }).where(eq13(listings.id, input.listingId));
+      await db3.update(listings).set({ isFeatured: true, featuredUntil, updatedAt: /* @__PURE__ */ new Date() }).where(eq14(listings.id, input.listingId));
       return { success: true, featuredUntil };
     }),
-    create: protectedProcedure.input(z14.object({
-      title: z14.string(),
-      description: z14.string(),
-      categoryId: z14.number(),
-      type: z14.enum(["marketplace", "auction", "rental"]),
-      price: z14.number().optional(),
-      originalPrice: z14.number().optional(),
-      images: z14.array(z14.string()).optional(),
-      location: z14.string().optional(),
-      district: z14.string().optional(),
-      brand: z14.string().optional(),
-      model: z14.string().optional(),
-      color: z14.string().optional(),
-      condition: z14.enum(["new", "like-new", "good", "fair"]).optional(),
-      videoUrl: z14.string().optional(),
-      length: z14.number().optional(),
-      width: z14.number().optional(),
-      height: z14.number().optional(),
-      weight: z14.number().optional()
+    create: protectedProcedure.input(z15.object({
+      title: z15.string(),
+      description: z15.string(),
+      categoryId: z15.number(),
+      type: z15.enum(["marketplace", "auction", "rental"]),
+      price: z15.number().optional(),
+      originalPrice: z15.number().optional(),
+      images: z15.array(z15.string()).optional(),
+      location: z15.string().optional(),
+      district: z15.string().optional(),
+      brand: z15.string().optional(),
+      model: z15.string().optional(),
+      color: z15.string().optional(),
+      condition: z15.enum(["new", "like-new", "good", "fair"]).optional(),
+      videoUrl: z15.string().optional(),
+      length: z15.number().optional(),
+      width: z15.number().optional(),
+      height: z15.number().optional(),
+      weight: z15.number().optional()
     })).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
@@ -5206,7 +5499,7 @@ var appRouter = router({
       const isAdmin2 = ctx.user.role === "admin" || ctx.user.role === "super_admin";
       const isAllowedRole = allowedRoles.includes(ctx.user.role);
       if (!isAdmin2 && (!isAllowedRole || !ctx.user.isVerified)) {
-        throw new TRPCError10({
+        throw new TRPCError11({
           code: "FORBIDDEN",
           message: "Only verified Sellers, Dealers, Wholesalers, and Distributors can post listings."
         });
@@ -5264,12 +5557,12 @@ var appRouter = router({
       }
       return result;
     }),
-    update: protectedProcedure.input(z14.object({
-      id: z14.number(),
-      title: z14.string().optional(),
-      description: z14.string().optional(),
-      price: z14.number().optional(),
-      status: z14.enum(["active", "sold", "expired", "closed"]).optional()
+    update: protectedProcedure.input(z15.object({
+      id: z15.number(),
+      title: z15.string().optional(),
+      description: z15.string().optional(),
+      price: z15.number().optional(),
+      status: z15.enum(["active", "sold", "expired", "closed"]).optional()
     })).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
@@ -5283,21 +5576,21 @@ var appRouter = router({
         price: input.price || listing.price,
         status: input.status || listing.status,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq13(listings.id, input.id));
+      }).where(eq14(listings.id, input.id));
       await inngest.send({
         name: "listing/change",
         data: { action: "updated", listingId: input.id, title: input.title || listing.title, userId: ctx.user.id }
       });
       return result;
     }),
-    delete: protectedProcedure.input(z14.number()).mutation(async ({ input, ctx }) => {
+    delete: protectedProcedure.input(z15.number()).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
       const listing = await getListingById(input);
       if (!listing || listing.userId !== ctx.user.id) {
         throw new Error("Unauthorized");
       }
-      await db3.delete(listings).where(eq13(listings.id, input));
+      await db3.delete(listings).where(eq14(listings.id, input));
       await inngest.send({
         name: "listing/change",
         data: { action: "deleted", listingId: input, title: listing.title, userId: ctx.user.id }
@@ -5307,7 +5600,7 @@ var appRouter = router({
   }),
   // Users
   users: router({
-    getProfile: publicProcedure.input(z14.object({ userId: z14.union([z14.number(), z14.string()]) })).query(async ({ input }) => {
+    getProfile: publicProcedure.input(z15.object({ userId: z15.union([z15.number(), z15.string()]) })).query(async ({ input }) => {
       const idNum = typeof input.userId === "string" ? parseInt(input.userId, 10) : input.userId;
       if (isNaN(idNum)) return null;
       return getUserById(idNum);
@@ -5315,38 +5608,38 @@ var appRouter = router({
   }),
   // Categories
   categories: router({
-    list: publicProcedure.input(z14.object({ sector: z14.string().optional() }).optional()).query(async ({ input }) => {
+    list: publicProcedure.input(z15.object({ sector: z15.string().optional() }).optional()).query(async ({ input }) => {
       return getCategories(input?.sector);
     }),
-    getSubcategories: publicProcedure.input(z14.object({
-      parentId: z14.number(),
-      sector: z14.string().optional()
+    getSubcategories: publicProcedure.input(z15.object({
+      parentId: z15.number(),
+      sector: z15.string().optional()
     })).query(async ({ input }) => {
       return getSubcategories(input.parentId, input.sector);
     })
   }),
   // Auctions
   auctions: router({
-    list: publicProcedure.input(z14.object({ limit: z14.number().default(20) })).query(async ({ input }) => {
+    list: publicProcedure.input(z15.object({ limit: z15.number().default(20) })).query(async ({ input }) => {
       return getAuctions(input.limit);
     }),
-    getById: publicProcedure.input(z14.number()).query(async ({ input }) => {
+    getById: publicProcedure.input(z15.number()).query(async ({ input }) => {
       return getAuctionById(input);
     }),
-    getByListingId: publicProcedure.input(z14.number()).query(async ({ input }) => {
+    getByListingId: publicProcedure.input(z15.number()).query(async ({ input }) => {
       return getAuctionByListingId(input);
     }),
-    getBids: publicProcedure.input(z14.number()).query(async ({ input }) => {
+    getBids: publicProcedure.input(z15.number()).query(async ({ input }) => {
       return getBidsForAuction(input);
     }),
-    placeBid: protectedProcedure.input(z14.object({
-      auctionId: z14.number(),
-      amount: z14.number()
+    placeBid: protectedProcedure.input(z15.object({
+      auctionId: z15.number(),
+      amount: z15.number()
     })).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
       const auction = await getAuctionById(input.auctionId);
-      if (!auction) throw new TRPCError10({ code: "NOT_FOUND", message: "Auction not found" });
+      if (!auction) throw new TRPCError11({ code: "NOT_FOUND", message: "Auction not found" });
       const result = await db3.insert(bids).values({
         auctionId: input.auctionId,
         bidderId: ctx.user.id,
@@ -5367,22 +5660,28 @@ var appRouter = router({
         console.error("Failed to broadcast bid via WebSocket:", e);
       }
       return result;
+    }),
+    myBids: protectedProcedure.query(async ({ ctx }) => {
+      const { getUserBids: getUserBids2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      return getUserBids2(ctx.user.id);
     })
   }),
+  // Returns
+  returns: returnsRouter,
   // Messages
   messages: router({
     getConversations: protectedProcedure.query(async ({ ctx }) => {
       return getConversations(ctx.user.id);
     }),
-    getMessages: protectedProcedure.input(z14.number()).query(async ({ input, ctx }) => {
+    getMessages: protectedProcedure.input(z15.number()).query(async ({ input, ctx }) => {
       return getMessages(ctx.user.id, input);
     }),
-    send: protectedProcedure.input(z14.object({
-      recipientId: z14.number(),
-      content: z14.string(),
-      listingId: z14.number().optional(),
-      attachmentUrl: z14.string().optional(),
-      attachmentType: z14.string().optional()
+    send: protectedProcedure.input(z15.object({
+      recipientId: z15.number(),
+      content: z15.string(),
+      listingId: z15.number().optional(),
+      attachmentUrl: z15.string().optional(),
+      attachmentType: z15.string().optional()
     })).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
@@ -5436,10 +5735,10 @@ var appRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       return getUserFavorites(ctx.user.id);
     }),
-    isFavorited: protectedProcedure.input(z14.number()).query(async ({ input, ctx }) => {
+    isFavorited: protectedProcedure.input(z15.number()).query(async ({ input, ctx }) => {
       return isFavorited(ctx.user.id, input);
     }),
-    add: protectedProcedure.input(z14.number()).mutation(async ({ input, ctx }) => {
+    add: protectedProcedure.input(z15.number()).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
       const result = await db3.insert(favorites).values({
@@ -5448,10 +5747,10 @@ var appRouter = router({
       });
       return result;
     }),
-    remove: protectedProcedure.input(z14.number()).mutation(async ({ input, ctx }) => {
+    remove: protectedProcedure.input(z15.number()).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
-      return db3.delete(favorites).where(eq13(favorites.listingId, input));
+      return db3.delete(favorites).where(eq14(favorites.listingId, input));
     })
   }),
   // Bookings
@@ -5459,15 +5758,15 @@ var appRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       return getUserBookings(ctx.user.id);
     }),
-    getListingBookings: protectedProcedure.input(z14.number()).query(async ({ input, ctx }) => {
+    getListingBookings: protectedProcedure.input(z15.number()).query(async ({ input, ctx }) => {
       const booking = await getListingBookings(input);
       return booking;
     }),
-    create: protectedProcedure.input(z14.object({
-      listingId: z14.number(),
-      startDate: z14.date(),
-      endDate: z14.date(),
-      totalPrice: z14.number()
+    create: protectedProcedure.input(z15.object({
+      listingId: z15.number(),
+      startDate: z15.date(),
+      endDate: z15.date(),
+      totalPrice: z15.number()
     })).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
@@ -5490,13 +5789,13 @@ var appRouter = router({
     listSellerOrders: protectedProcedure.query(async ({ ctx }) => {
       return getSellerTransactions(ctx.user.id);
     }),
-    updateStatus: protectedProcedure.input(z14.object({
-      orderId: z14.string(),
-      status: z14.string()
+    updateStatus: protectedProcedure.input(z15.object({
+      orderId: z15.string(),
+      status: z15.string()
     })).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
-      const existing = await db3.select().from(transactions).where(eq13(transactions.orderId, input.orderId));
+      const existing = await db3.select().from(transactions).where(eq14(transactions.orderId, input.orderId));
       if (existing.length === 0) throw new Error("Order not found");
       const order = existing[0];
       if (order.sellerId !== ctx.user.id) {
@@ -5515,8 +5814,8 @@ var appRouter = router({
       if (statusTimestamps.processedAt) timestampUpdate.processedAt = statusTimestamps.processedAt;
       if (statusTimestamps.shippedAt) timestampUpdate.shippedAt = statusTimestamps.shippedAt;
       if (statusTimestamps.deliveredAt) timestampUpdate.deliveredAt = statusTimestamps.deliveredAt;
-      const result = await db3.update(transactions).set(timestampUpdate).where(eq13(transactions.orderId, input.orderId)).returning();
-      const listing = await db3.select().from(listings).where(eq13(listings.id, order.listingId));
+      const result = await db3.update(transactions).set(timestampUpdate).where(eq14(transactions.orderId, input.orderId)).returning();
+      const listing = await db3.select().from(listings).where(eq14(listings.id, order.listingId));
       const listingTitle = listing[0]?.title || "Product";
       await db3.insert(notifications).values({
         userId: order.buyerId,
@@ -5567,24 +5866,24 @@ var appRouter = router({
       }
       return result;
     }),
-    checkoutCart: protectedProcedure.input(z14.object({
-      paymentMethod: z14.string(),
-      deliveryName: z14.string(),
-      deliveryAddress: z14.string(),
-      deliveryPhone: z14.string(),
-      deliveryEmail: z14.string(),
-      deliverySpeed: z14.string(),
-      deliveryFee: z14.number(),
-      estDeliveryDate: z14.string()
+    checkoutCart: protectedProcedure.input(z15.object({
+      paymentMethod: z15.string(),
+      deliveryName: z15.string(),
+      deliveryAddress: z15.string(),
+      deliveryPhone: z15.string(),
+      deliveryEmail: z15.string(),
+      deliverySpeed: z15.string(),
+      deliveryFee: z15.number(),
+      estDeliveryDate: z15.string()
     })).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
       const cart = await db3.query.carts.findFirst({
-        where: and9(eq13(carts.userId, ctx.user.id), eq13(carts.status, "active")),
+        where: and10(eq14(carts.userId, ctx.user.id), eq14(carts.status, "active")),
         with: { items: { with: { listing: true } } }
       });
       if (!cart || !cart.items || cart.items.length === 0) {
-        throw new TRPCError10({ code: "BAD_REQUEST", message: "Cart is empty" });
+        throw new TRPCError11({ code: "BAD_REQUEST", message: "Cart is empty" });
       }
       const configResult = await db3.select().from(companyConfigs).limit(1);
       const commissionRate = configResult.length > 0 ? configResult[0].commissionRate : 0;
@@ -5621,7 +5920,7 @@ var appRouter = router({
         }).returning();
         createdTransactions.push(tx);
         if (item.listing.stock) {
-          await db3.update(listings).set({ stock: Math.max(0, item.listing.stock - item.quantity) }).where(eq13(listings.id, item.listing.id));
+          await db3.update(listings).set({ stock: Math.max(0, item.listing.stock - item.quantity) }).where(eq14(listings.id, item.listing.id));
         }
         const listingTitle = item.listing.title || "Product";
         await db3.insert(notifications).values([
@@ -5681,30 +5980,30 @@ var appRouter = router({
           console.error("Email error", e);
         }
       }
-      await db3.update(carts).set({ status: "checked_out", updatedAt: /* @__PURE__ */ new Date() }).where(eq13(carts.id, cart.id));
+      await db3.update(carts).set({ status: "checked_out", updatedAt: /* @__PURE__ */ new Date() }).where(eq14(carts.id, cart.id));
       return { success: true, transactions: createdTransactions };
     }),
-    create: protectedProcedure.input(z14.object({
-      listingId: z14.number(),
-      sellerId: z14.number(),
-      amount: z14.number(),
-      paymentMethod: z14.string(),
-      deliveryName: z14.string(),
-      deliveryAddress: z14.string(),
-      deliveryPhone: z14.string(),
-      deliveryEmail: z14.string(),
-      deliverySpeed: z14.string(),
-      deliveryFee: z14.number(),
-      estDeliveryDate: z14.string()
+    create: protectedProcedure.input(z15.object({
+      listingId: z15.number(),
+      sellerId: z15.number(),
+      amount: z15.number(),
+      paymentMethod: z15.string(),
+      deliveryName: z15.string(),
+      deliveryAddress: z15.string(),
+      deliveryPhone: z15.string(),
+      deliveryEmail: z15.string(),
+      deliverySpeed: z15.string(),
+      deliveryFee: z15.number(),
+      estDeliveryDate: z15.string()
     })).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
       const orderId = `ORD-${nanoid(8).toUpperCase()}`;
       const listing = await db3.query.listings.findFirst({
-        where: eq13(listings.id, input.listingId)
+        where: eq14(listings.id, input.listingId)
       });
       if (listing && listing.stock) {
-        await db3.update(listings).set({ stock: Math.max(0, listing.stock - 1) }).where(eq13(listings.id, input.listingId));
+        await db3.update(listings).set({ stock: Math.max(0, listing.stock - 1) }).where(eq14(listings.id, input.listingId));
       }
       const result = await db3.insert(transactions).values({
         orderId,
@@ -5729,7 +6028,7 @@ var appRouter = router({
         estDeliveryDate: input.estDeliveryDate,
         placedAt: /* @__PURE__ */ new Date()
       }).returning();
-      const listingRes = await db3.select().from(listings).where(eq13(listings.id, input.listingId));
+      const listingRes = await db3.select().from(listings).where(eq14(listings.id, input.listingId));
       const listingData = listingRes[0];
       const listingTitle = listingData?.title || "Product";
       await db3.insert(notifications).values({
@@ -5818,22 +6117,22 @@ var appRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       return getUserNotifications(ctx.user.id);
     }),
-    markAsRead: protectedProcedure.input(z14.number()).mutation(async ({ input, ctx }) => {
+    markAsRead: protectedProcedure.input(z15.number()).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
-      await db3.update(notifications).set({ isRead: true }).where(and9(eq13(notifications.id, input), eq13(notifications.userId, ctx.user.id)));
+      await db3.update(notifications).set({ isRead: true }).where(and10(eq14(notifications.id, input), eq14(notifications.userId, ctx.user.id)));
       return { success: true };
     }),
     markAllAsRead: protectedProcedure.mutation(async ({ ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
-      await db3.update(notifications).set({ isRead: true }).where(eq13(notifications.userId, ctx.user.id));
+      await db3.update(notifications).set({ isRead: true }).where(eq14(notifications.userId, ctx.user.id));
       return { success: true };
     }),
-    delete: protectedProcedure.input(z14.number()).mutation(async ({ input, ctx }) => {
+    delete: protectedProcedure.input(z15.number()).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
-      await db3.delete(notifications).where(and9(eq13(notifications.id, input), eq13(notifications.userId, ctx.user.id)));
+      await db3.delete(notifications).where(and10(eq14(notifications.id, input), eq14(notifications.userId, ctx.user.id)));
       return { success: true };
     })
   }),
@@ -5856,6 +6155,7 @@ var appRouter = router({
 });
 
 // backend/_core/clerk.ts
+init_db();
 import { createClerkClient, verifyToken } from "@clerk/backend";
 var secretKey = process.env.CLERK_SECRET_KEY || "";
 if (!secretKey && process.env.NODE_ENV === "production") {
@@ -5951,6 +6251,7 @@ var AuthService = class {
 var authService = new AuthService();
 
 // backend/_core/context.ts
+init_debugLog();
 async function createContext(opts) {
   let user = null;
   const authHeader = opts.req.headers.authorization;
@@ -6071,9 +6372,14 @@ async function setupVite(app2, server) {
 
 // backend/_core/createApp.ts
 init_websocket();
+init_debugLog();
+init_db();
+init_schema();
 
 // backend/seeds/categories.seed.ts
-import { eq as eq14 } from "drizzle-orm";
+init_schema();
+init_db();
+import { eq as eq15 } from "drizzle-orm";
 var CATEGORIES_DATA = [
   {
     name: "Electronics",
@@ -6493,7 +6799,7 @@ async function seedCategories() {
     }
     for (const category of CATEGORIES_DATA) {
       const sector = category.sector ?? "marketplace";
-      const existingCategory = await db3.select().from(categories).where(eq14(categories.slug, category.slug)).limit(1);
+      const existingCategory = await db3.select().from(categories).where(eq15(categories.slug, category.slug)).limit(1);
       let mainCatId;
       if (existingCategory.length === 0) {
         await db3.insert(categories).values({
@@ -6504,7 +6810,7 @@ async function seedCategories() {
           sector,
           parentId: null
         });
-        const inserted = await db3.select().from(categories).where(eq14(categories.slug, category.slug)).limit(1);
+        const inserted = await db3.select().from(categories).where(eq15(categories.slug, category.slug)).limit(1);
         mainCatId = inserted[0]?.id;
         console.log(`\u2713 Created category: ${category.name}`);
       } else {
@@ -6526,7 +6832,7 @@ async function seedCategories() {
           updates.icon = category.icon;
         }
         if (Object.keys(updates).length > 0) {
-          await db3.update(categories).set(updates).where(eq14(categories.id, mainCatId));
+          await db3.update(categories).set(updates).where(eq15(categories.id, mainCatId));
           console.log(`\u21BA Updated category metadata for: ${category.name}`);
         }
       }
@@ -6536,7 +6842,7 @@ async function seedCategories() {
       if (category.subcategories && category.subcategories.length > 0) {
         let addedCount = 0;
         for (const subcategory of category.subcategories) {
-          const existingSubcategory = await db3.select().from(categories).where(eq14(categories.slug, subcategory.slug)).limit(1);
+          const existingSubcategory = await db3.select().from(categories).where(eq15(categories.slug, subcategory.slug)).limit(1);
           if (existingSubcategory.length === 0) {
             await db3.insert(categories).values({
               name: subcategory.name,
@@ -6568,7 +6874,7 @@ async function seedCategories() {
               subUpdates.icon = expectedIcon;
             }
             if (Object.keys(subUpdates).length > 0) {
-              await db3.update(categories).set(subUpdates).where(eq14(categories.id, existing.id));
+              await db3.update(categories).set(subUpdates).where(eq15(categories.id, existing.id));
               console.log(`\u21BA Updated subcategory metadata for: ${subcategory.name}`);
             }
           }
@@ -6694,8 +7000,10 @@ uploadRouter.get("/image/:fileId", async (req, res) => {
 import { serve } from "inngest/express";
 
 // backend/inngest/functions.ts
+init_db();
+init_schema();
 init_websocket();
-import { eq as eq15 } from "drizzle-orm";
+import { eq as eq16 } from "drizzle-orm";
 var sendQueuedEmail = inngest.createFunction(
   { id: "send-queued-email", triggers: [{ event: "email/queued" }] },
   async ({ event, step }) => {
@@ -6722,7 +7030,7 @@ var scheduleAuctionClose = inngest.createFunction(
     await step.sleepUntil("wait-for-auction-end", new Date(endTime));
     await step.run("finalize-auction", async () => {
       const db3 = await getDb();
-      const [auction] = await db3.select().from(auctions).where(eq15(auctions.id, auctionId));
+      const [auction] = await db3.select().from(auctions).where(eq16(auctions.id, auctionId));
       if (!auction) return;
       console.log(`[Inngest] Finalizing Auction ID: ${auctionId}`);
       if (auction.highestBidderId && auction.currentBid) {
@@ -6762,12 +7070,15 @@ var inngestHandler = serve({
 });
 
 // backend/rest.ts
+init_db();
+init_crypto();
 import { Router as Router2 } from "express";
 import multer2 from "multer";
 import crypto3 from "crypto";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { and as and10, desc as desc9, eq as eq16, or as or4, sql as sql6 } from "drizzle-orm";
+import { and as and11, desc as desc10, eq as eq17, or as or5, sql as sql7 } from "drizzle-orm";
+init_debugLog();
 
 // backend/r2.ts
 import { S3Client } from "@aws-sdk/client-s3";
@@ -6794,6 +7105,7 @@ function getR2Client() {
 }
 
 // backend/rest.ts
+init_schema();
 var storage2 = multer2.memoryStorage();
 var upload2 = multer2({
   storage: storage2,
@@ -6870,7 +7182,7 @@ restRouter.post("/verification/upload", upload2.single("file"), async (req, res)
       data: { stepId, documentUrl, filename: req.file.originalname, contentType: req.file.mimetype },
       status: "pending"
     });
-    await db3.update(users).set({ verificationStatus: "pending" }).where(eq16(users.id, authed.id));
+    await db3.update(users).set({ verificationStatus: "pending" }).where(eq17(users.id, authed.id));
     return res.json({ documentUrl });
   } catch (e) {
     const msg = e?.message || "Upload failed";
@@ -6886,12 +7198,12 @@ restRouter.post("/recommendations", async (req, res) => {
     if (!db3) return res.status(500).json({ error: "Database not available" });
     let categoryId = null;
     if (typeof currentListingId === "number") {
-      const current = await db3.select().from(listings).where(eq16(listings.id, currentListingId)).limit(1);
+      const current = await db3.select().from(listings).where(eq17(listings.id, currentListingId)).limit(1);
       categoryId = current[0]?.categoryId ?? null;
     }
-    const whereParts = [eq16(listings.status, "active")];
-    if (typeof currentListingId === "number") whereParts.push(sql6`${listings.id} <> ${currentListingId}`);
-    if (categoryId) whereParts.push(eq16(listings.categoryId, categoryId));
+    const whereParts = [eq17(listings.status, "active")];
+    if (typeof currentListingId === "number") whereParts.push(sql7`${listings.id} <> ${currentListingId}`);
+    if (categoryId) whereParts.push(eq17(listings.categoryId, categoryId));
     const rows = await db3.select({
       id: listings.id,
       title: listings.title,
@@ -6901,7 +7213,7 @@ restRouter.post("/recommendations", async (req, res) => {
       sellerName: users.name,
       sellerId: users.id,
       categoryName: categories.name
-    }).from(listings).leftJoin(users, eq16(listings.userId, users.id)).leftJoin(categories, eq16(listings.categoryId, categories.id)).where(and10(...whereParts)).orderBy(desc9(listings.createdAt)).limit(take);
+    }).from(listings).leftJoin(users, eq17(listings.userId, users.id)).leftJoin(categories, eq17(listings.categoryId, categories.id)).where(and11(...whereParts)).orderBy(desc10(listings.createdAt)).limit(take);
     const recs = rows.map((r, idx) => ({
       id: r.id,
       title: r.title,
@@ -6921,7 +7233,7 @@ restRouter.post("/recommendations", async (req, res) => {
         images: listings.images,
         sellerName: users.name,
         categoryName: categories.name
-      }).from(listings).leftJoin(users, eq16(listings.userId, users.id)).leftJoin(categories, eq16(listings.categoryId, categories.id)).where(eq16(listings.status, "active")).orderBy(sql6`RANDOM()`).limit(take);
+      }).from(listings).leftJoin(users, eq17(listings.userId, users.id)).leftJoin(categories, eq17(listings.categoryId, categories.id)).where(eq17(listings.status, "active")).orderBy(sql7`RANDOM()`).limit(take);
       return res.json({
         recommendations: fallback.map((r, idx) => ({
           id: r.id,
@@ -6947,7 +7259,7 @@ restRouter.get("/disputes/:disputeId", async (req, res) => {
     if (!Number.isFinite(disputeId)) return res.status(400).json({ error: "Invalid disputeId" });
     const db3 = await getDb();
     if (!db3) return res.status(500).json({ error: "Database not available" });
-    const [d] = await db3.select().from(disputes).where(eq16(disputes.id, disputeId)).limit(1);
+    const [d] = await db3.select().from(disputes).where(eq17(disputes.id, disputeId)).limit(1);
     if (!d) return res.status(404).json({ error: "Dispute not found" });
     const msgRows = await db3.select({
       id: messages.id,
@@ -6957,12 +7269,12 @@ restRouter.get("/disputes/:disputeId", async (req, res) => {
       createdAt: messages.createdAt,
       attachmentUrl: messages.attachmentUrl,
       senderName: users.name
-    }).from(messages).leftJoin(users, eq16(messages.senderId, users.id)).where(
-      and10(
-        eq16(messages.listingId, d.listingId),
-        or4(
-          and10(eq16(messages.senderId, d.buyerId), eq16(messages.recipientId, d.sellerId)),
-          and10(eq16(messages.senderId, d.sellerId), eq16(messages.recipientId, d.buyerId))
+    }).from(messages).leftJoin(users, eq17(messages.senderId, users.id)).where(
+      and11(
+        eq17(messages.listingId, d.listingId),
+        or5(
+          and11(eq17(messages.senderId, d.buyerId), eq17(messages.recipientId, d.sellerId)),
+          and11(eq17(messages.senderId, d.sellerId), eq17(messages.recipientId, d.buyerId))
         )
       )
     ).orderBy(messages.createdAt);
@@ -7001,7 +7313,7 @@ restRouter.post("/disputes/:disputeId/messages", async (req, res) => {
     }
     const db3 = await getDb();
     if (!db3) return res.status(500).json({ error: "Database not available" });
-    const [d] = await db3.select().from(disputes).where(eq16(disputes.id, disputeId)).limit(1);
+    const [d] = await db3.select().from(disputes).where(eq17(disputes.id, disputeId)).limit(1);
     if (!d) return res.status(404).json({ error: "Dispute not found" });
     const isBuyer = user.id === d.buyerId;
     const isSeller = user.id === d.sellerId;
@@ -7046,12 +7358,12 @@ restRouter.post("/disputes/:disputeId/resolve", async (req, res) => {
     }
     const db3 = await getDb();
     if (!db3) return res.status(500).json({ error: "Database not available" });
-    const [d] = await db3.select().from(disputes).where(eq16(disputes.id, disputeId)).limit(1);
+    const [d] = await db3.select().from(disputes).where(eq17(disputes.id, disputeId)).limit(1);
     if (!d) return res.status(404).json({ error: "Dispute not found" });
     if (user.id !== d.buyerId && user.id !== d.sellerId) {
       return res.status(403).json({ error: "Forbidden" });
     }
-    await db3.update(disputes).set({ status: "resolved", resolution, resolvedAt: /* @__PURE__ */ new Date(), updatedAt: /* @__PURE__ */ new Date() }).where(eq16(disputes.id, disputeId));
+    await db3.update(disputes).set({ status: "resolved", resolution, resolvedAt: /* @__PURE__ */ new Date(), updatedAt: /* @__PURE__ */ new Date() }).where(eq17(disputes.id, disputeId));
     return res.json({ success: true });
   } catch (e) {
     const msg = e?.message || "Failed to resolve dispute";
@@ -7076,14 +7388,14 @@ restRouter.get("/analytics", async (req, res) => {
   try {
     const db3 = await getDb();
     if (!db3) return res.status(500).json({ error: "Database not available" });
-    const [{ totalUsers } = { totalUsers: 0 }] = await db3.select({ totalUsers: sql6`count(*)` }).from(users);
-    const [{ totalTransactions } = { totalTransactions: 0 }] = await db3.select({ totalTransactions: sql6`count(*)` }).from(transactions);
-    const [{ totalRevenue } = { totalRevenue: 0 }] = await db3.select({ totalRevenue: sql6`coalesce(sum(${transactions.amount}), 0)` }).from(transactions);
+    const [{ totalUsers } = { totalUsers: 0 }] = await db3.select({ totalUsers: sql7`count(*)` }).from(users);
+    const [{ totalTransactions } = { totalTransactions: 0 }] = await db3.select({ totalTransactions: sql7`count(*)` }).from(transactions);
+    const [{ totalRevenue } = { totalRevenue: 0 }] = await db3.select({ totalRevenue: sql7`coalesce(sum(${transactions.amount}), 0)` }).from(transactions);
     const avg2 = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
     const topCats = await db3.select({
       name: categories.name,
-      count: sql6`count(*)`
-    }).from(listings).innerJoin(categories, eq16(listings.categoryId, categories.id)).groupBy(categories.name).orderBy(sql6`count(*) desc`).limit(6);
+      count: sql7`count(*)`
+    }).from(listings).innerJoin(categories, eq17(listings.categoryId, categories.id)).groupBy(categories.name).orderBy(sql7`count(*) desc`).limit(6);
     const points = range === "week" ? 7 : range === "year" ? 12 : 30;
     const userGrowth = Array.from({ length: points }, () => 0);
     const revenueGrowth = Array.from({ length: points }, () => 0);
@@ -7271,8 +7583,8 @@ async function createApp(options) {
         const updateData = { status: mappedStatus, updatedAt: /* @__PURE__ */ new Date() };
         if (mappedStatus === "delivered") updateData.deliveredAt = /* @__PURE__ */ new Date();
         if (mappedStatus === "shipped") updateData.shippedAt = /* @__PURE__ */ new Date();
-        const { eq: eq17 } = __require("drizzle-orm");
-        await db.update(transactions).set(updateData).where(eq17(transactions.trackingNumber, trackingNumber));
+        const { eq: eq18 } = __require("drizzle-orm");
+        await db.update(transactions).set(updateData).where(eq18(transactions.trackingNumber, trackingNumber));
       }
       res.status(200).send("Webhook received");
     } catch (err) {

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { eq, desc, and, or } from "drizzle-orm";
+import { eq, desc, and, or, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { transactions, returns, notifications, users, listings } from "../../drizzle/schema";
 
@@ -70,18 +70,29 @@ export const returnsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const res = await db.query.returns.findMany({
-        where: eq(returns.buyerId, ctx.user.id),
-        with: {
-          transaction: {
-            with: {
-              listing: true,
-              seller: { columns: { name: true, businessName: true, email: true } }
-            }
-          }
-        },
-        orderBy: [desc(returns.createdAt)],
-      });
+      const seller = db.select().from(users).as("seller");
+      const res = await db
+        .select({
+          id: returns.id,
+          transactionId: returns.transactionId,
+          reason: returns.reason,
+          description: returns.description,
+          status: returns.status,
+          images: returns.images,
+          adminNotes: returns.adminNotes,
+          createdAt: returns.createdAt,
+          updatedAt: returns.updatedAt,
+          listingTitle: listings.title,
+          listingImage: listings.images,
+          sellerName: sql<string>`seller.name`,
+          sellerBusinessName: sql<string>`seller."businessName"`,
+        })
+        .from(returns)
+        .leftJoin(transactions, eq(transactions.id, returns.transactionId))
+        .leftJoin(listings, eq(listings.id, transactions.listingId))
+        .leftJoin(seller, eq(sql`seller.id`, transactions.sellerId))
+        .where(eq(returns.buyerId, ctx.user.id))
+        .orderBy(desc(returns.createdAt));
       return res;
     }),
 
@@ -90,18 +101,29 @@ export const returnsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const res = await db.query.returns.findMany({
-        where: eq(returns.sellerId, ctx.user.id),
-        with: {
-          transaction: {
-            with: {
-              listing: true,
-              buyer: { columns: { name: true, email: true } }
-            }
-          }
-        },
-        orderBy: [desc(returns.createdAt)],
-      });
+      const buyer = db.select().from(users).as("buyer");
+      const res = await db
+        .select({
+          id: returns.id,
+          transactionId: returns.transactionId,
+          reason: returns.reason,
+          description: returns.description,
+          status: returns.status,
+          images: returns.images,
+          adminNotes: returns.adminNotes,
+          createdAt: returns.createdAt,
+          updatedAt: returns.updatedAt,
+          listingTitle: listings.title,
+          listingImage: listings.images,
+          buyerName: sql<string>`buyer.name`,
+          buyerEmail: sql<string>`buyer.email`,
+        })
+        .from(returns)
+        .leftJoin(transactions, eq(transactions.id, returns.transactionId))
+        .leftJoin(listings, eq(listings.id, transactions.listingId))
+        .leftJoin(buyer, eq(sql`buyer.id`, transactions.buyerId))
+        .where(eq(returns.sellerId, ctx.user.id))
+        .orderBy(desc(returns.createdAt));
       return res;
     }),
 

@@ -36,6 +36,8 @@ import { sellerAnalyticsRouter } from "./seller-analytics";
 import { dealsRouter } from "./deals";
 import { verificationRouter } from "./verification";
 import { cartRouter } from "./cart";
+import { auctionsRouter } from "./auctions";
+import { returnsRouter } from "./returns";
 import { inngest } from "../inngest/client";
 
 export const appRouter = router({
@@ -407,7 +409,16 @@ export const appRouter = router({
 
         return result;
       }),
+
+    myBids: protectedProcedure
+      .query(async ({ ctx }) => {
+        const { getUserBids } = await import("../db");
+        return getUserBids(ctx.user.id);
+      }),
   }),
+
+  // Returns
+  returns: returnsRouter,
 
   // Messages
   messages: router({
