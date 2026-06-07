@@ -221,7 +221,7 @@ export const searchRouter = router({
           SELECT u.id, u.name, u.is_verified,
                  COUNT(l.id) AS total_listings
           FROM users u
-          LEFT JOIN listings l ON l.user_id = u.id
+          LEFT JOIN listings l ON l."userId" = u.id
           WHERE u.role IN ('seller', 'dealer', 'wholesaler', 'distributor')
           GROUP BY u.id, u.name, u.is_verified
           HAVING COUNT(l.id) > 0

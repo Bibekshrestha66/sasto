@@ -31,6 +31,7 @@ export async function createApp(options: CreateAppOptions): Promise<CreateAppRes
   const { mode, httpServer } = options;
   const app = express();
   app.set('trust proxy', 1);
+  app.disable('x-powered-by'); // Prevent Express from setting headers that conflict with socket.io long-polling responses
   
   // Prevent Express from processing socket.io paths so it doesn't trigger 404 handlers while polling
   app.use("/socket.io", (req, res, next) => {
