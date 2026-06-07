@@ -34,10 +34,10 @@ export function useWebSocket() {
       return;
     }
 
-    // Create socket connection
-    const socketUrl = import.meta.env.VITE_API_URL || window.location.origin;
+    // Create socket connection — always target backend (Render), not the frontend host (Vercel)
+    const socketUrl = (import.meta.env.VITE_APP_URL as string) || window.location.origin;
     const socket = io(socketUrl, {
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"], // polling first for Render compatibility
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
