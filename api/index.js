@@ -675,6 +675,14 @@ var listings = pgTable("listings", {
   originalPrice: real("originalPrice"),
   discount: integer("discount"),
   videoUrl: text("videoUrl"),
+  length: real("length"),
+  // Logistics: Length in cm
+  width: real("width"),
+  // Logistics: Width in cm
+  height: real("height"),
+  // Logistics: Height in cm
+  weight: real("weight"),
+  // Logistics: Weight in kg
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   expiresAt: timestamp("expiresAt")
@@ -2752,6 +2760,117 @@ var adminRouter = router({
       pendingListings: totalListings.filter((l) => l.status === "pending").length,
       rejectedListings: totalListings.filter((l) => l.status === "rejected").length
     };
+  }),
+  // Advanced Analytics
+  getAdvancedAnalytics: adminProcedure.input(z3.object({ timeframe: z3.enum(["daily", "weekly", "bi_weekly", "monthly", "quarterly", "half_year", "yearly"]).default("monthly") })).query(async ({ input }) => {
+    const db3 = await getDb();
+    const allUsers = await db3.select().from(users);
+    const allListings = await db3.select().from(listings);
+    const allTransactions = await db3.select().from(transactions).where(eq5(transactions.status, "completed"));
+    const now = /* @__PURE__ */ new Date();
+    let startDate = /* @__PURE__ */ new Date();
+    switch (input.timeframe) {
+      case "daily":
+        startDate.setDate(now.getDate() - 30);
+        break;
+      // last 30 days
+      case "weekly":
+        startDate.setDate(now.getDate() - 90);
+        break;
+      // last 12 weeks
+      case "bi_weekly":
+        startDate.setDate(now.getDate() - 180);
+        break;
+      case "monthly":
+        startDate.setMonth(now.getMonth() - 12);
+        break;
+      // last 12 months
+      case "quarterly":
+        startDate.setFullYear(now.getFullYear() - 3);
+        break;
+      case "half_year":
+        startDate.setFullYear(now.getFullYear() - 5);
+        break;
+      case "yearly":
+        startDate.setFullYear(now.getFullYear() - 10);
+        break;
+    }
+    const getGroupKey = (date) => {
+      if (input.timeframe === "daily") return date.toISOString().split("T")[0];
+      if (input.timeframe === "weekly") {
+        const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+        const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 864e5;
+        return `${date.getFullYear()}-W${Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7)}`;
+      }
+      if (input.timeframe === "monthly") return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      if (input.timeframe === "yearly") return `${date.getFullYear()}`;
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    };
+    const chartData = {};
+    allTransactions.forEach((t2) => {
+      if (!t2.createdAt || new Date(t2.createdAt) < startDate) return;
+      const key = getGroupKey(new Date(t2.createdAt));
+      if (!chartData[key]) chartData[key] = { revenue: 0, newUsers: 0, newListings: 0 };
+      chartData[key].revenue += Number(t2.amount);
+    });
+    allUsers.forEach((u) => {
+      if (!u.createdAt || new Date(u.createdAt) < startDate) return;
+      const key = getGroupKey(new Date(u.createdAt));
+      if (!chartData[key]) chartData[key] = { revenue: 0, newUsers: 0, newListings: 0 };
+      chartData[key].newUsers += 1;
+    });
+    allListings.forEach((l) => {
+      if (!l.createdAt || new Date(l.createdAt) < startDate) return;
+      const key = getGroupKey(new Date(l.createdAt));
+      if (!chartData[key]) chartData[key] = { revenue: 0, newUsers: 0, newListings: 0 };
+      chartData[key].newListings += 1;
+    });
+    const sortedChartData = Object.keys(chartData).sort().map((key) => ({
+      date: key,
+      ...chartData[key]
+    }));
+    const sellerStats = {};
+    allTransactions.forEach((t2) => {
+      if (t2.sellerId) {
+        if (!sellerStats[t2.sellerId]) sellerStats[t2.sellerId] = { revenue: 0, sales: 0 };
+        sellerStats[t2.sellerId].revenue += Number(t2.amount);
+        sellerStats[t2.sellerId].sales += 1;
+      }
+    });
+    const topSellersIds = Object.keys(sellerStats).sort((a, b) => sellerStats[Number(b)].revenue - sellerStats[Number(a)].revenue).slice(0, 5).map(Number);
+    const topSellers = allUsers.filter((u) => topSellersIds.includes(u.id)).map((u) => ({
+      ...u,
+      revenue: sellerStats[u.id].revenue,
+      sales: sellerStats[u.id].sales
+    })).sort((a, b) => b.revenue - a.revenue);
+    const productStats = {};
+    allTransactions.forEach((t2) => {
+      if (t2.listingId) {
+        if (!productStats[t2.listingId]) productStats[t2.listingId] = { revenue: 0, sales: 0 };
+        productStats[t2.listingId].revenue += Number(t2.amount);
+        productStats[t2.listingId].sales += 1;
+      }
+    });
+    const topProductIds = Object.keys(productStats).sort((a, b) => productStats[Number(b)].revenue - productStats[Number(a)].revenue).slice(0, 5).map(Number);
+    const topProducts = allListings.filter((l) => topProductIds.includes(l.id)).map((l) => ({
+      ...l,
+      revenue: productStats[l.id].revenue,
+      sales: productStats[l.id].sales
+    })).sort((a, b) => b.revenue - a.revenue);
+    return {
+      chartData: sortedChartData,
+      topSellers,
+      topProducts
+    };
+  }),
+  // Listing Search for Admin
+  searchListingsAdmin: adminProcedure.input(z3.object({ query: z3.string() })).query(async ({ input }) => {
+    const db3 = await getDb();
+    const allListings = await db3.select().from(listings);
+    const q = input.query.toLowerCase();
+    return allListings.filter(
+      (l) => l.id.toString() === q || l.title && l.title.toLowerCase().includes(q)
+    ).slice(0, 50);
   }),
   // Admin Logs
   getAdminLogs: adminProcedure.input(z3.object({ page: z3.number().default(1), limit: z3.number().default(20) })).query(async ({ input }) => {
@@ -5037,7 +5156,11 @@ var appRouter = router({
       model: z14.string().optional(),
       color: z14.string().optional(),
       condition: z14.enum(["new", "like-new", "good", "fair"]).optional(),
-      videoUrl: z14.string().optional()
+      videoUrl: z14.string().optional(),
+      length: z14.number().optional(),
+      width: z14.number().optional(),
+      height: z14.number().optional(),
+      weight: z14.number().optional()
     })).mutation(async ({ input, ctx }) => {
       const db3 = await getDb();
       if (!db3) throw new Error("Database not available");
@@ -5061,6 +5184,10 @@ var appRouter = router({
         discount: input.originalPrice && input.price && input.originalPrice > input.price ? Math.round((input.originalPrice - input.price) / input.originalPrice * 100) : null,
         images: input.images,
         videoUrl: input.videoUrl,
+        length: input.length ?? null,
+        width: input.width ?? null,
+        height: input.height ?? null,
+        weight: input.weight ?? null,
         location: input.location,
         district: input.district,
         brand: input.brand,
@@ -6423,30 +6550,48 @@ async function seedCategories() {
 // backend/upload.ts
 import { Router } from "express";
 import multer from "multer";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { ObjectId as ObjectId2 } from "mongodb";
 import crypto2 from "crypto";
 
-// backend/r2.ts
-import { S3Client } from "@aws-sdk/client-s3";
-var R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
-var R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
-var R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
-var R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "sasto";
-var R2_PUBLIC_CUSTOM_DOMAIN = process.env.R2_PUBLIC_CUSTOM_DOMAIN;
-function getR2PublicBaseUrl() {
-  if (R2_PUBLIC_CUSTOM_DOMAIN) return R2_PUBLIC_CUSTOM_DOMAIN.replace(/\/$/, "");
-  if (!R2_ACCOUNT_ID) return null;
-  return `https://${R2_BUCKET_NAME}.${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+// backend/mongoStorage.ts
+import { MongoClient, GridFSBucket } from "mongodb";
+import { Readable } from "stream";
+var mongoClient = null;
+var gridFSBucket = null;
+async function initMongoStorage() {
+  if (gridFSBucket) return gridFSBucket;
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error("MONGODB_URI is not defined in environment variables.");
+  }
+  mongoClient = new MongoClient(uri);
+  await mongoClient.connect();
+  const db3 = mongoClient.db();
+  gridFSBucket = new GridFSBucket(db3, {
+    bucketName: "uploads"
+  });
+  return gridFSBucket;
 }
-function getR2Client() {
-  if (!R2_ACCOUNT_ID) return null;
-  return new S3Client({
-    endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: R2_ACCESS_KEY_ID || "",
-      secretAccessKey: R2_SECRET_ACCESS_KEY || ""
-    },
-    region: "auto"
+async function getGridFSBucket() {
+  if (!gridFSBucket) {
+    return await initMongoStorage();
+  }
+  return gridFSBucket;
+}
+async function uploadToGridFS(filename2, buffer, contentType) {
+  const bucket = await getGridFSBucket();
+  return new Promise((resolve, reject) => {
+    const readableTrackStream = new Readable();
+    readableTrackStream.push(buffer);
+    readableTrackStream.push(null);
+    const uploadStream = bucket.openUploadStream(filename2, {
+      metadata: { contentType }
+    });
+    readableTrackStream.pipe(uploadStream).on("error", (error) => {
+      reject(error);
+    }).on("finish", () => {
+      resolve(uploadStream.id.toString());
+    });
   });
 }
 
@@ -6460,10 +6605,6 @@ var upload = multer({
 });
 uploadRouter.post("/image", upload.single("image"), async (req, res) => {
   try {
-    const r2 = getR2Client();
-    if (!r2) {
-      return res.status(500).json({ error: "R2 is not configured" });
-    }
     if (!req.file) {
       return res.status(400).json({ error: "No file provided" });
     }
@@ -6475,20 +6616,39 @@ uploadRouter.post("/image", upload.single("image"), async (req, res) => {
     const fileExtension = req.file.originalname.split(".").pop() || "jpg";
     const randomHash = crypto2.randomBytes(16).toString("hex");
     const key = `uploads/${Date.now()}-${randomHash}.${fileExtension}`;
-    await r2.send(
-      new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: key,
-        Body: req.file.buffer,
-        ContentType: req.file.mimetype
-      })
-    );
-    const baseUrl = getR2PublicBaseUrl() || `https://${R2_BUCKET_NAME}.${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
-    const publicUrl = `${baseUrl}/${key}`;
+    const fileId = await uploadToGridFS(key, req.file.buffer, req.file.mimetype);
+    const publicUrl = `/api/upload/image/${fileId}`;
     res.json({ url: publicUrl });
   } catch (error) {
     console.error("Upload error:", error);
     res.status(500).json({ error: error.message || "Failed to upload image" });
+  }
+});
+uploadRouter.get("/image/:fileId", async (req, res) => {
+  try {
+    const fileId = req.params.fileId;
+    if (!ObjectId2.isValid(fileId)) {
+      return res.status(400).json({ error: "Invalid file ID" });
+    }
+    const bucket = await getGridFSBucket();
+    const _id = new ObjectId2(fileId);
+    const files = await bucket.find({ _id }).toArray();
+    if (files.length === 0) {
+      return res.status(404).json({ error: "File not found" });
+    }
+    const file = files[0];
+    const contentType = file.metadata?.contentType || "application/octet-stream";
+    res.set("Content-Type", contentType);
+    res.set("Cache-Control", "public, max-age=31536000, immutable");
+    const downloadStream = bucket.openDownloadStream(_id);
+    downloadStream.on("error", (err) => {
+      console.error("Stream error:", err);
+      res.status(500).end();
+    });
+    downloadStream.pipe(res);
+  } catch (error) {
+    console.error("Download error:", error);
+    res.status(500).json({ error: error.message || "Failed to download image" });
   }
 });
 
@@ -6567,9 +6727,35 @@ var inngestHandler = serve({
 import { Router as Router2 } from "express";
 import multer2 from "multer";
 import crypto3 from "crypto";
-import { PutObjectCommand as PutObjectCommand2 } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { and as and10, desc as desc9, eq as eq16, or as or4, sql as sql6 } from "drizzle-orm";
+
+// backend/r2.ts
+import { S3Client } from "@aws-sdk/client-s3";
+var R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
+var R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
+var R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
+var R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "sasto";
+var R2_PUBLIC_CUSTOM_DOMAIN = process.env.R2_PUBLIC_CUSTOM_DOMAIN;
+function getR2PublicBaseUrl() {
+  if (R2_PUBLIC_CUSTOM_DOMAIN) return R2_PUBLIC_CUSTOM_DOMAIN.replace(/\/$/, "");
+  if (!R2_ACCOUNT_ID) return null;
+  return `https://${R2_BUCKET_NAME}.${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+}
+function getR2Client() {
+  if (!R2_ACCOUNT_ID) return null;
+  return new S3Client({
+    endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: R2_ACCESS_KEY_ID || "",
+      secretAccessKey: R2_SECRET_ACCESS_KEY || ""
+    },
+    region: "auto"
+  });
+}
+
+// backend/rest.ts
 var storage2 = multer2.memoryStorage();
 var upload2 = multer2({
   storage: storage2,
@@ -6600,7 +6786,7 @@ restRouter.post("/upload-url", async (req, res) => {
     }
     const safeName = sanitizeFilename(filename2);
     const key = `uploads/${Date.now()}-${crypto3.randomUUID()}-${safeName}`;
-    const cmd = new PutObjectCommand2({
+    const cmd = new PutObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: key,
       ContentType: contentType
@@ -6630,7 +6816,7 @@ restRouter.post("/verification/upload", upload2.single("file"), async (req, res)
     const ext = (req.file.originalname.split(".").pop() || "bin").toLowerCase();
     const key = `verification/${authed.id}/${stepId}/${Date.now()}-${crypto3.randomUUID()}.${ext}`;
     await r2.send(
-      new PutObjectCommand2({
+      new PutObjectCommand({
         Bucket: R2_BUCKET_NAME,
         Key: key,
         Body: req.file.buffer,

@@ -85,6 +85,10 @@ export const listings = pgTable("listings", {
   originalPrice: real("originalPrice"),
   discount: integer("discount"),
   videoUrl: text("videoUrl"),
+  length: real("length"), // Logistics: Length in cm
+  width: real("width"),   // Logistics: Width in cm
+  height: real("height"), // Logistics: Height in cm
+  weight: real("weight"), // Logistics: Weight in kg
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   expiresAt: timestamp("expiresAt"),

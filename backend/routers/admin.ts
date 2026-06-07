@@ -144,6 +144,125 @@ export const adminRouter = router({
     };
   }),
 
+  // Advanced Analytics
+  getAdvancedAnalytics: adminProcedure
+    .input(z.object({ timeframe: z.enum(["daily", "weekly", "bi_weekly", "monthly", "quarterly", "half_year", "yearly"]).default("monthly") }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      
+      const allUsers = await db.select().from(users);
+      const allListings = await db.select().from(listings);
+      const allTransactions = await db.select().from(transactions).where(eq(transactions.status, "completed"));
+
+      // Date logic based on timeframe (approximate for simplicity of aggregation)
+      const now = new Date();
+      let startDate = new Date();
+      
+      switch (input.timeframe) {
+        case "daily": startDate.setDate(now.getDate() - 30); break; // last 30 days
+        case "weekly": startDate.setDate(now.getDate() - 90); break; // last 12 weeks
+        case "bi_weekly": startDate.setDate(now.getDate() - 180); break;
+        case "monthly": startDate.setMonth(now.getMonth() - 12); break; // last 12 months
+        case "quarterly": startDate.setFullYear(now.getFullYear() - 3); break;
+        case "half_year": startDate.setFullYear(now.getFullYear() - 5); break;
+        case "yearly": startDate.setFullYear(now.getFullYear() - 10); break;
+      }
+
+      // Grouping helper
+      const getGroupKey = (date: Date) => {
+        if (input.timeframe === "daily") return date.toISOString().split("T")[0];
+        if (input.timeframe === "weekly") {
+          const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+          const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+          return `${date.getFullYear()}-W${Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7)}`;
+        }
+        if (input.timeframe === "monthly") return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (input.timeframe === "yearly") return `${date.getFullYear()}`;
+        // Fallback for others
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      };
+
+      const chartData: Record<string, { revenue: number; newUsers: number; newListings: number }> = {};
+
+      allTransactions.forEach(t => {
+        if (!t.createdAt || new Date(t.createdAt) < startDate) return;
+        const key = getGroupKey(new Date(t.createdAt));
+        if (!chartData[key]) chartData[key] = { revenue: 0, newUsers: 0, newListings: 0 };
+        chartData[key].revenue += Number(t.amount);
+      });
+
+      allUsers.forEach(u => {
+        if (!u.createdAt || new Date(u.createdAt) < startDate) return;
+        const key = getGroupKey(new Date(u.createdAt));
+        if (!chartData[key]) chartData[key] = { revenue: 0, newUsers: 0, newListings: 0 };
+        chartData[key].newUsers += 1;
+      });
+
+      allListings.forEach(l => {
+        if (!l.createdAt || new Date(l.createdAt) < startDate) return;
+        const key = getGroupKey(new Date(l.createdAt));
+        if (!chartData[key]) chartData[key] = { revenue: 0, newUsers: 0, newListings: 0 };
+        chartData[key].newListings += 1;
+      });
+
+      const sortedChartData = Object.keys(chartData).sort().map(key => ({
+        date: key,
+        ...chartData[key]
+      }));
+
+      // Top Sellers
+      const sellerStats: Record<number, { revenue: number, sales: number }> = {};
+      allTransactions.forEach(t => {
+        if (t.sellerId) {
+          if (!sellerStats[t.sellerId]) sellerStats[t.sellerId] = { revenue: 0, sales: 0 };
+          sellerStats[t.sellerId].revenue += Number(t.amount);
+          sellerStats[t.sellerId].sales += 1;
+        }
+      });
+      const topSellersIds = Object.keys(sellerStats).sort((a, b) => sellerStats[Number(b)].revenue - sellerStats[Number(a)].revenue).slice(0, 5).map(Number);
+      const topSellers = allUsers.filter(u => topSellersIds.includes(u.id)).map(u => ({
+        ...u,
+        revenue: sellerStats[u.id].revenue,
+        sales: sellerStats[u.id].sales
+      })).sort((a, b) => b.revenue - a.revenue);
+
+      // Top Products
+      const productStats: Record<number, { revenue: number, sales: number }> = {};
+      allTransactions.forEach(t => {
+        if (t.listingId) {
+          if (!productStats[t.listingId]) productStats[t.listingId] = { revenue: 0, sales: 0 };
+          productStats[t.listingId].revenue += Number(t.amount);
+          productStats[t.listingId].sales += 1;
+        }
+      });
+      const topProductIds = Object.keys(productStats).sort((a, b) => productStats[Number(b)].revenue - productStats[Number(a)].revenue).slice(0, 5).map(Number);
+      const topProducts = allListings.filter(l => topProductIds.includes(l.id)).map(l => ({
+        ...l,
+        revenue: productStats[l.id].revenue,
+        sales: productStats[l.id].sales
+      })).sort((a, b) => b.revenue - a.revenue);
+
+      return {
+        chartData: sortedChartData,
+        topSellers,
+        topProducts
+      };
+    }),
+
+  // Listing Search for Admin
+  searchListingsAdmin: adminProcedure
+    .input(z.object({ query: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const allListings = await db.select().from(listings);
+      
+      const q = input.query.toLowerCase();
+      return allListings.filter(l => 
+        l.id.toString() === q || 
+        (l.title && l.title.toLowerCase().includes(q))
+      ).slice(0, 50); // limit to 50 results
+    }),
+
   // Admin Logs
   getAdminLogs: adminProcedure
     .input(z.object({ page: z.number().default(1), limit: z.number().default(20) }))

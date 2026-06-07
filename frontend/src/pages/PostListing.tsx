@@ -54,6 +54,11 @@ export default function PostListing() {
     title: "",
     description: "",
     price: "",
+    originalPrice: "",
+    length: "",
+    width: "",
+    height: "",
+    weight: "",
     location: "",
     district: "Kathmandu",
     brand: "",
@@ -300,6 +305,10 @@ export default function PostListing() {
         price: parseFloat(formData.price),
         stock: formData.stock ? parseInt(formData.stock, 10) : 1,
         images: base64Images.length > 0 ? base64Images : undefined,
+        length: parseFloat(formData.length) || 0,
+        width: parseFloat(formData.width) || 0,
+        height: parseFloat(formData.height) || 0,
+        weight: parseFloat(formData.weight) || 0,
         location: formData.location || undefined,
         district: formData.district || undefined,
         brand: formData.brand || undefined,
@@ -606,18 +615,49 @@ export default function PostListing() {
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="pt-5 border-t border-slate-100">
-                <div className="mb-4">
-                  <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center text-green-600">
-                      <MapPin className="w-3.5 h-3.5" />
-                    </div>
-                    Location & Specifications
-                  </h3>
+                {/* Location & Logistics Section */}
+                <div className="col-span-full mt-6 mb-2">
+                  <h3 className="text-slate-800 font-bold text-base border-b border-slate-100 pb-2">Location & Logistics Tracking</h3>
+                  <p className="text-xs text-slate-500 mt-1">Provide accurate location and dimensions to calculate shipping costs for our logistics partners.</p>
                 </div>
-                
+
+                <div className="col-span-full">
+                  <Label htmlFor="location" className="text-slate-700 text-sm font-bold mb-1.5 block">Item Location (City/Area) *</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      id="location"
+                      name="location"
+                      placeholder="e.g., Thamel, Kathmandu"
+                      value={formData.location}
+                      onChange={handleInputChange}
+                      className="pl-11 bg-slate-50 border-slate-200 rounded-lg pr-4 py-3 focus:ring-green-500/20 focus:border-green-500 transition-all text-slate-700 h-11"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 col-span-full">
+                  <div>
+                    <Label htmlFor="length" className="text-slate-700 text-xs font-bold mb-1 block">Length (cm)</Label>
+                    <Input id="length" name="length" type="number" placeholder="0" min="0" step="0.1" value={formData.length} onChange={handleInputChange} className="bg-slate-50 border-slate-200" />
+                  </div>
+                  <div>
+                    <Label htmlFor="width" className="text-slate-700 text-xs font-bold mb-1 block">Width (cm)</Label>
+                    <Input id="width" name="width" type="number" placeholder="0" min="0" step="0.1" value={formData.width} onChange={handleInputChange} className="bg-slate-50 border-slate-200" />
+                  </div>
+                  <div>
+                    <Label htmlFor="height" className="text-slate-700 text-xs font-bold mb-1 block">Height (cm)</Label>
+                    <Input id="height" name="height" type="number" placeholder="0" min="0" step="0.1" value={formData.height} onChange={handleInputChange} className="bg-slate-50 border-slate-200" />
+                  </div>
+                  <div>
+                    <Label htmlFor="weight" className="text-slate-700 text-xs font-bold mb-1 block">Weight (kg)</Label>
+                    <Input id="weight" name="weight" type="number" placeholder="0" min="0" step="0.1" value={formData.weight} onChange={handleInputChange} className="bg-slate-50 border-slate-200" />
+                  </div>
+                </div>
+
+                {/* Additional Details (Optional) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="district" className="text-slate-700 text-sm font-bold mb-1.5 block">District *</Label>
@@ -638,17 +678,6 @@ export default function PostListing() {
                         <ChevronDown className="w-3.5 h-3.5" />
                       </div>
                     </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="location" className="text-slate-700 text-sm font-bold mb-1.5 block">Specific Area</Label>
-                    <Input
-                      id="location"
-                      name="location"
-                      placeholder="e.g., New Road, Kathmandu"
-                      value={formData.location}
-                      onChange={handleInputChange}
-                      className="bg-slate-50 border-slate-200 rounded-lg px-4 py-3 focus:ring-green-500/20 focus:border-green-500 transition-all text-slate-700 h-11"
-                    />
                   </div>
                   <div>
                     <Label htmlFor="brand" className="text-slate-700 text-sm font-bold mb-1.5 block">Brand</Label>
@@ -672,7 +701,7 @@ export default function PostListing() {
                       className="bg-slate-50 border-slate-200 rounded-lg px-4 py-3 focus:ring-green-500/20 focus:border-green-500 transition-all text-slate-700 h-11"
                     />
                   </div>
-                  <div className="md:col-span-2">
+                  <div>
                     <Label htmlFor="color" className="text-slate-700 text-sm font-bold mb-1.5 block">Color</Label>
                     <div className="relative">
                       <select

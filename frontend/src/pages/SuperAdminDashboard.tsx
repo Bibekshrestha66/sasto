@@ -20,7 +20,7 @@ import {
   TrendingDown, TrendingUp, History, PieChart, Layers, Download,
   Shield, Users, Package, DollarSign, BarChart3, FileDown,
   Loader2, CheckCircle2, XCircle, AlertCircle, Key, Lock, Unlock, Settings2,
-  FileText, ChevronRight, Mail, Phone, MapPin, Briefcase, ShieldCheck, ShieldAlert, ArrowLeft, RefreshCw, Paperclip, X, Truck
+  FileText, ChevronRight, Mail, Phone, MapPin, Briefcase, ShieldCheck, ShieldAlert, ArrowLeft, RefreshCw, Paperclip, X, Truck, Search
 } from "lucide-react";
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -40,6 +40,16 @@ export default function SuperAdminDashboard() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // Advanced Analytics State
+  const [timeframe, setTimeframe] = useState<"daily" | "weekly" | "bi_weekly" | "monthly" | "quarterly" | "half_year" | "yearly">("monthly");
+  
+  // Search Ads State
+  const [listingSearchQuery, setListingSearchQuery] = useState("");
+  const { data: searchResults, isLoading: searchLoading } = trpc.admin.searchListingsAdmin.useQuery(
+    { query: listingSearchQuery },
+    { enabled: listingSearchQuery.length > 0 && selectedTab === "search_ads" }
+  );
 
   // Sponsored ads state
   const [promotionStatusFilter, setPromotionStatusFilter] = useState("");
@@ -140,6 +150,7 @@ export default function SuperAdminDashboard() {
   const { data: flaggedData, isLoading: flaggedLoading } = trpc.admin.getFlaggedListings.useQuery({ page: 1, limit: 20 });
   const { data: financialData, isLoading: finLoading } = trpc.admin.getFinancialStats.useQuery();
   const { data: advancedFinance, isLoading: advFinLoading } = trpc.admin.getAdvancedFinancials.useQuery({});
+  const { data: advancedAnalytics, isLoading: advAnalyticsLoading } = trpc.admin.getAdvancedAnalytics.useQuery({ timeframe });
   const { data: pendingVerifications, isLoading: verLoading } = trpc.admin.getPendingVerifications.useQuery({ page: 1, limit: 20 });
   const { data: allVerifications } = trpc.admin.getAllVerifications.useQuery({ page: 1, limit: 50 });
   const { data: selectedUserProfile, isLoading: profileLoading } = trpc.admin.getUserProfile.useQuery(
@@ -562,6 +573,7 @@ export default function SuperAdminDashboard() {
             )}
             {user.role === "super_admin" && (
               <>
+                <TabsTrigger value="search_ads" className="flex items-center gap-1.5 text-xs"><Search className="w-3.5 h-3.5" />Search Ads</TabsTrigger>
                 <TabsTrigger value="finance" className="flex items-center gap-1.5 text-xs"><DollarSign className="w-3.5 h-3.5" />Finance Pro</TabsTrigger>
                 <TabsTrigger value="payments" className="flex items-center gap-1.5 text-xs"><DollarSign className="w-3.5 h-3.5" />Payment & Fees</TabsTrigger>
                 <TabsTrigger value="logistics" className="flex items-center gap-1.5 text-xs"><Truck className="w-3.5 h-3.5" />Logistics Partners</TabsTrigger>
@@ -570,49 +582,254 @@ export default function SuperAdminDashboard() {
             )}
           </TabsList>
 
+          {/* SEARCH ADS */}
+          <TabsContent value="search_ads" className="space-y-6">
+            <Card className="border-none shadow-md">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-black">Search Listings</CardTitle>
+                <CardDescription>Search ads by their exact ID or by title</CardDescription>
+                <div className="relative mt-2 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input 
+                    placeholder="Enter Listing ID or Title..." 
+                    className="pl-9 h-10"
+                    value={listingSearchQuery}
+                    onChange={(e) => setListingSearchQuery(e.target.value)}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {searchLoading ? (
+                  <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto" /></div>
+                ) : searchResults && searchResults.length > 0 ? (
+                  <div className="divide-y divide-gray-100">
+                    {searchResults.map((listing) => (
+                      <div key={listing.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200">
+                            {listing.images && listing.images[0] ? (
+                              <img src={listing.images[0]} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center"><Package className="w-6 h-6 text-gray-400" /></div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900 text-sm">#{listing.id} - {listing.title}</p>
+                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{listing.description}</p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant="outline" className="text-[10px]">{listing.type}</Badge>
+                              <Badge variant={listing.status === "active" ? "default" : "secondary"} className="text-[10px] capitalize bg-green-100 text-green-700 hover:bg-green-100 border-none">{listing.status}</Badge>
+                              {listing.price && <span className="text-xs font-bold text-gray-700">Rs. {Number(listing.price).toLocaleString()}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-2">
+                          <a href={`/listing/${listing.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center rounded-md text-xs font-medium border h-8 px-3 hover:bg-gray-50 transition-colors">
+                            <Eye className="w-3.5 h-3.5 mr-1" /> View Ad
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : listingSearchQuery.length > 0 ? (
+                  <div className="py-12 text-center text-gray-400">
+                    <Search className="w-8 h-8 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm">No listings found for "{listingSearchQuery}"</p>
+                  </div>
+                ) : (
+                  <div className="py-12 text-center text-gray-400">
+                    <Package className="w-8 h-8 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm">Type an ID or title to begin searching</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* OVERVIEW */}
-          <TabsContent value="overview">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="border-none shadow-md">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-black">Platform Analytics</CardTitle>
-                  <CardDescription>Live database metrics</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {[
-                    { label: "Total Users", value: analyticsData?.totalUsers },
-                    { label: "Verified Users", value: analyticsData?.verifiedUsers },
-                    { label: "Total Listings", value: analyticsData?.totalListings },
-                    { label: "Active Listings", value: analyticsData?.activeListings },
-                    { label: "Pending Listings", value: analyticsData?.pendingListings },
-                    { label: "Rejected Listings", value: analyticsData?.rejectedListings },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                      <span className="text-sm text-gray-600">{item.label}</span>
-                      <span className="font-black text-gray-900">{item.value ?? "—"}</span>
-                    </div>
-                  ))}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-black text-gray-900 tracking-tight">Platform Analytics</h2>
+                <p className="text-gray-500 text-sm">Monitor your marketplace growth and revenue</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select value={timeframe} onValueChange={(val: any) => setTimeframe(val)}>
+                  <SelectTrigger className="w-36 bg-white shadow-sm h-10 border-gray-200">
+                    <SelectValue placeholder="Select timeframe" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="bi_weekly">Bi-Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="half_year">Half Year</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Top Metric Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="border-none shadow-md bg-gradient-to-br from-blue-50 to-white overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <Users className="w-16 h-16 text-blue-600" />
+                </div>
+                <CardContent className="p-6 relative z-10">
+                  <p className="text-sm font-bold text-blue-600 mb-1 uppercase tracking-wider">Total Users</p>
+                  <p className="text-3xl font-black text-gray-900">{analyticsData?.totalUsers ?? "—"}</p>
                 </CardContent>
               </Card>
-              <Card className="border-none shadow-md">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-black">Monetization</CardTitle>
-                  <CardDescription>Featured listing revenue</CardDescription>
+
+              <Card className="border-none shadow-md bg-gradient-to-br from-green-50 to-white overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <Package className="w-16 h-16 text-green-600" />
+                </div>
+                <CardContent className="p-6 relative z-10">
+                  <p className="text-sm font-bold text-green-600 mb-1 uppercase tracking-wider">Active Ads</p>
+                  <p className="text-3xl font-black text-gray-900">{analyticsData?.activeListings ?? "—"}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-md bg-gradient-to-br from-purple-50 to-white overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <DollarSign className="w-16 h-16 text-purple-600" />
+                </div>
+                <CardContent className="p-6 relative z-10">
+                  <p className="text-sm font-bold text-purple-600 mb-1 uppercase tracking-wider">Promo Rev</p>
+                  <p className="text-3xl font-black text-gray-900">
+                    <span className="text-xl">Rs.</span>
+                    {financialData ? financialData.promotionRevenue.toLocaleString() : "—"}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-md bg-gradient-to-br from-amber-50 to-white overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <TrendingUp className="w-16 h-16 text-amber-600" />
+                </div>
+                <CardContent className="p-6 relative z-10">
+                  <p className="text-sm font-bold text-amber-600 mb-1 uppercase tracking-wider">Total Value</p>
+                  <p className="text-3xl font-black text-gray-900">
+                    <span className="text-xl">Rs.</span>
+                    {financialData ? financialData.totalValue.toLocaleString() : "—"}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Growth Chart */}
+            <Card className="border-none shadow-md">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-black">Growth & Revenue</CardTitle>
+                <CardDescription>Platform growth over the selected timeframe</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {advAnalyticsLoading ? (
+                  <div className="h-72 flex items-center justify-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                  </div>
+                ) : (
+                  <div className="h-72 w-full mt-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={advancedAnalytics?.chartData || []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                        <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dx={-10} tickFormatter={(val) => `Rs.${val}`} />
+                        <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dx={10} />
+                        <Tooltip 
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                          cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }}
+                        />
+                        <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }}/>
+                        <Area yAxisId="left" type="monotone" name="Revenue (Rs)" dataKey="revenue" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                        <Area yAxisId="right" type="monotone" name="New Users" dataKey="newUsers" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorUsers)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Top Tables */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Top Sellers */}
+              <Card className="border-none shadow-md overflow-hidden">
+                <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
+                  <CardTitle className="text-base font-black flex items-center gap-2">
+                    <Crown className="w-5 h-5 text-amber-500" /> Top Sellers
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {[
-                    { label: "Featured Listings", value: financialData?.featuredListings },
-                    { label: "Promotion Revenue", value: financialData ? `NPR ${financialData.promotionRevenue.toLocaleString()}` : "—" },
-                    { label: "Total Listing Value", value: financialData ? `NPR ${(financialData.totalValue || 0).toLocaleString()}` : "—" },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                      <span className="text-sm text-gray-600">{item.label}</span>
-                      <span className="font-black text-gray-900">{item.value ?? "—"}</span>
-                    </div>
-                  ))}
-                  <Button size="sm" className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white" onClick={() => setSelectedTab("finance")}>
-                    <FileDown className="w-3.5 h-3.5 mr-2" />View Finance Report
-                  </Button>
+                <CardContent className="p-0">
+                  <div className="divide-y divide-gray-100">
+                    {advancedAnalytics?.topSellers?.length === 0 && (
+                      <div className="p-6 text-center text-gray-400 text-sm">No transaction data available.</div>
+                    )}
+                    {advancedAnalytics?.topSellers?.map((seller, idx) => (
+                      <div key={seller.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${idx === 0 ? 'bg-amber-100 text-amber-700' : idx === 1 ? 'bg-gray-200 text-gray-700' : idx === 2 ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-600'}`}>
+                            #{idx + 1}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-gray-900">{seller.name}</p>
+                            <p className="text-xs text-gray-500">{seller.sales} sales completed</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-black text-sm text-green-600">Rs. {seller.revenue.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Top Products */}
+              <Card className="border-none shadow-md overflow-hidden">
+                <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
+                  <CardTitle className="text-base font-black flex items-center gap-2">
+                    <Rocket className="w-5 h-5 text-blue-500" /> Top Selling Ads
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y divide-gray-100">
+                    {advancedAnalytics?.topProducts?.length === 0 && (
+                      <div className="p-6 text-center text-gray-400 text-sm">No transaction data available.</div>
+                    )}
+                    {advancedAnalytics?.topProducts?.map((product, idx) => (
+                      <div key={product.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden shrink-0">
+                            {product.images && product.images[0] ? (
+                              <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center"><Package className="w-4 h-4 text-gray-400" /></div>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-sm text-gray-900 truncate pr-4">{product.title}</p>
+                            <p className="text-xs text-gray-500">ID: {product.id} • {product.sales} sold</p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-black text-sm text-green-600">Rs. {product.revenue.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             </div>

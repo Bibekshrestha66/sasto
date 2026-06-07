@@ -172,6 +172,10 @@ export const appRouter = router({
         color: z.string().optional(),
         condition: z.enum(["new", "like-new", "good", "fair"]).optional(),
         videoUrl: z.string().optional(),
+        length: z.number().optional(),
+        width: z.number().optional(),
+        height: z.number().optional(),
+        weight: z.number().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
@@ -202,6 +206,10 @@ export const appRouter = router({
             : null,
           images: input.images,
           videoUrl: input.videoUrl,
+          length: input.length ?? null,
+          width: input.width ?? null,
+          height: input.height ?? null,
+          weight: input.weight ?? null,
           location: input.location,
           district: input.district,
           brand: input.brand,
