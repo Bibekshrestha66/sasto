@@ -752,14 +752,14 @@ export const adminRouter = router({
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const dailyTrends = await db
         .select({
-          date: sql<string>`date(${transactions.createdAt}, 'unixepoch')`,
+          date: sql<string>`to_char(${transactions.createdAt}, 'YYYY-MM-DD')`,
           revenue: sql<number>`sum(${transactions.amount})`,
           orders: sql<number>`count(${transactions.id})`,
         })
         .from(transactions)
         .where(gte(transactions.createdAt, thirtyDaysAgo))
-        .groupBy(sql`date(${transactions.createdAt}, 'unixepoch')`)
-        .orderBy(sql`date(${transactions.createdAt}, 'unixepoch')`);
+        .groupBy(sql`to_char(${transactions.createdAt}, 'YYYY-MM-DD')`)
+        .orderBy(sql`to_char(${transactions.createdAt}, 'YYYY-MM-DD')`);
 
       return {
         summary: {

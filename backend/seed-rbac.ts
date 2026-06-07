@@ -1,6 +1,10 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { roles, permissions, rolePermissions } from "./drizzle/schema";
+import * as dotenv from "dotenv";
+import path from "path";
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
+import { roles, permissions, rolePermissions } from "../drizzle/schema";
 
 async function run() {
   const connectionString = process.env.DATABASE_URL;
@@ -15,13 +19,13 @@ async function run() {
   console.log("Seeding RBAC roles and permissions...");
 
   const defaultRoles = [
-    { name: "user", description: "Standard user account" },
-    { name: "seller", description: "Verified seller account" },
-    { name: "csr", description: "Customer Support Representative" },
-    { name: "sub_moderator", description: "Junior moderator for basic tasks" },
-    { name: "moderator", description: "Standard moderator for content" },
-    { name: "admin", description: "Administrator with high privileges" },
-    { name: "super_admin", description: "System owner with full access" }
+    { name: "user", description: "Standard user account", level: 10 },
+    { name: "seller", description: "Verified seller account", level: 20 },
+    { name: "csr", description: "Customer Support Representative", level: 30 },
+    { name: "sub_moderator", description: "Junior moderator for basic tasks", level: 40 },
+    { name: "moderator", description: "Standard moderator for content", level: 50 },
+    { name: "admin", description: "Administrator with high privileges", level: 80 },
+    { name: "super_admin", description: "System owner with full access", level: 100 }
   ];
 
   const defaultPermissions = [

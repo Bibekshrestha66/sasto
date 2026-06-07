@@ -35,7 +35,8 @@ export function useWebSocket() {
     }
 
     // Create socket connection
-    const socket = io(window.location.origin, {
+    const socketUrl = import.meta.env.VITE_API_URL || window.location.origin;
+    const socket = io(socketUrl, {
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionDelay: 1000,
