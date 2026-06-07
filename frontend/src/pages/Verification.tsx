@@ -669,6 +669,7 @@ function CameraCaptureField({ label, uploadedFile, isUploading, error, onCapture
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const fallbackInputRef = useRef<HTMLInputElement>(null);
 
   const startCamera = async () => {
     try {
@@ -749,19 +750,47 @@ function CameraCaptureField({ label, uploadedFile, isUploading, error, onCapture
           </div>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={startCamera}
-          className="w-full flex flex-col items-center justify-center gap-3 border-2 border-dashed border-slate-200 rounded-2xl p-8 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition-all group"
-        >
-          <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center group-hover:shadow-md transition-shadow">
-            <Camera className="w-6 h-6 text-slate-400 group-hover:text-slate-600" />
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={startCamera}
+            className="w-full flex flex-col items-center justify-center gap-3 border-2 border-dashed border-slate-200 rounded-2xl p-8 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition-all group"
+          >
+            <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center group-hover:shadow-md transition-shadow">
+              <Camera className="w-6 h-6 text-slate-400 group-hover:text-slate-600" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-slate-700">Open Camera</p>
+              <p className="text-xs text-slate-400 mt-0.5">Take a live selfie for verification</p>
+            </div>
+          </button>
+          
+          <div className="flex items-center justify-center gap-2">
+            <div className="h-px bg-slate-200 flex-1"></div>
+            <span className="text-xs text-slate-400 font-medium">OR</span>
+            <div className="h-px bg-slate-200 flex-1"></div>
           </div>
-          <div className="text-center">
-            <p className="text-sm font-bold text-slate-700">Open Camera</p>
-            <p className="text-xs text-slate-400 mt-0.5">Take a live selfie for verification</p>
-          </div>
-        </button>
+          
+          <button
+            type="button"
+            onClick={() => fallbackInputRef.current?.click()}
+            className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            Upload Photo instead
+          </button>
+          <input
+            ref={fallbackInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onCapture(file);
+              if (fallbackInputRef.current) fallbackInputRef.current.value = "";
+            }}
+          />
+        </div>
       )}
 
       {isUploading && (
