@@ -34,6 +34,10 @@ services:
       - key: R2_BUCKET_NAME
         sync: false
 
+      # MongoDB Storage
+      - key: MONGODB_URI
+        value: mongodb+srv://bibekshrestha66_db_user:GDqBd5b1hV0yekqw@sasto.rhuszav.mongodb.net/sasto_storage?appName=Sasto
+
       # Payload CMS Secret
       - key: PAYLOAD_SECRET
         sync: false # Set to a secure random string
