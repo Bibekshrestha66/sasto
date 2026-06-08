@@ -1421,24 +1421,24 @@ export default function SuperAdminDashboard() {
                       {pendingVerifications?.submissions.map((sub: any) => (
                         <div key={sub.id} className="border rounded-xl bg-white overflow-hidden shadow-sm">
                           {/* Header */}
-                          <div className="flex items-start justify-between p-4 border-b bg-gray-50">
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between p-4 border-b bg-gray-50 gap-4">
                             <div>
                               <p className="font-bold text-gray-900">{sub.userName}</p>
                               <p className="text-xs text-gray-500">{sub.userEmail}</p>
                               <Badge className={`mt-2 uppercase text-[10px] ${sub.type === 'kyb' ? 'bg-blue-600' : 'bg-purple-600'} text-white border-none`}>{sub.type}</Badge>
                             </div>
-                            <div className="flex flex-col items-end gap-2">
-                              <div className="flex gap-2">
-                                <Button size="sm" className="bg-green-600 hover:bg-green-700 h-9 px-4"
+                            <div className="flex flex-col sm:items-end gap-2 w-full sm:w-auto">
+                              <div className="flex gap-2 w-full sm:w-auto">
+                                <Button size="sm" className="bg-green-600 hover:bg-green-700 h-9 px-4 flex-1 sm:flex-none"
                                   onClick={() => reviewVerificationMutation.mutate({ submissionId: sub.id, status: "approved" })}>
                                   <UserCheck className="w-3.5 h-3.5 mr-1.5" />Approve
                                 </Button>
-                                <Button size="sm" variant="destructive" className="h-9 px-4"
+                                <Button size="sm" variant="destructive" className="h-9 px-4 flex-1 sm:flex-none"
                                   onClick={() => { setVerRejectSubId(sub.id); setVerRejectReason(""); setVerRejectModalOpen(true); }}>
                                   <XCircle className="w-3.5 h-3.5 mr-1.5" />Reject
                                 </Button>
                               </div>
-                              <p className="text-[10px] text-gray-400">Submitted {new Date(sub.createdAt || Date.now()).toLocaleDateString()}</p>
+                              <p className="text-[10px] text-gray-400 w-full text-center sm:text-right">Submitted {new Date(sub.createdAt || Date.now()).toLocaleDateString()}</p>
                             </div>
                           </div>
 
