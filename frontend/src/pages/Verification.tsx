@@ -63,6 +63,7 @@ export default function Verification() {
   const [type, setType] = useState<"kyc" | "kyb" | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, { name: string; preview: string }>>({});
+  const [isResubmitting, setIsResubmitting] = useState(false);
 
   const { data: submissions, refetch: refetchSubmissions, isLoading } =
     trpc.verification.getStatus.useQuery(undefined);
@@ -151,7 +152,7 @@ export default function Verification() {
   }
 
   // ── Pending ──
-  if (latestSubmission && latestSubmission.status === "pending") {
+  if (!isResubmitting && latestSubmission && latestSubmission.status === "pending") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-amber-50 flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl shadow-slate-200 p-10 text-center">
@@ -177,7 +178,7 @@ export default function Verification() {
   }
 
   // ── Rejected ──
-  if (latestSubmission && latestSubmission.status === "rejected") {
+  if (!isResubmitting && latestSubmission && latestSubmission.status === "rejected") {
     const rejectionReason = (latestSubmission as any).adminNotes || "Your documents did not meet our verification requirements.";
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50 flex items-center justify-center px-4 py-12">
@@ -220,7 +221,7 @@ export default function Verification() {
 
             <div className="flex flex-col gap-3">
               <Button
-                onClick={() => { setStep(1); }}
+                onClick={() => { setIsResubmitting(true); setStep(1); }}
                 className="w-full h-12 rounded-2xl font-bold bg-green-600 hover:bg-green-700 shadow-lg shadow-green-100"
               >
                 <ShieldCheck className="w-4 h-4 mr-2" />
