@@ -123,12 +123,12 @@ function AppContent() {
   return (
     <div className="flex flex-col min-h-screen">
       <ScrollToTop />
-      <Header />
-      <main className="flex-1 pb-16 md:pb-0">
+      {!isAdminPage && <Header />}
+      <main className={`flex-1 ${!isAdminPage ? "pb-16 md:pb-0" : ""}`}>
         <Router />
       </main>
       {!isMessagesPage && !isAdminPage && <Footer />}
-      <BottomNav />
+      {!isAdminPage && <BottomNav />}
     </div>
   );
 }
