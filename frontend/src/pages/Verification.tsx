@@ -176,6 +176,66 @@ export default function Verification() {
     );
   }
 
+  // ── Rejected ──
+  if (latestSubmission && latestSubmission.status === "rejected") {
+    const rejectionReason = (latestSubmission as any).adminNotes || "Your documents did not meet our verification requirements.";
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50 flex items-center justify-center px-4 py-12">
+        <div className="max-w-lg w-full bg-white rounded-3xl shadow-2xl shadow-slate-200 overflow-hidden">
+          {/* Red header */}
+          <div className="bg-gradient-to-r from-red-600 to-rose-500 p-8 text-center">
+            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-black text-white mb-1">Verification Rejected</h2>
+            <p className="text-red-100 text-sm">Your documents could not be approved</p>
+          </div>
+
+          <div className="p-8">
+            {/* Rejection reason box */}
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-6">
+              <p className="text-xs font-bold text-red-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5" /> Reason for Rejection
+              </p>
+              <p className="text-sm text-red-800 leading-relaxed font-medium">{rejectionReason}</p>
+            </div>
+
+            {/* What to do next */}
+            <div className="bg-slate-50 rounded-2xl p-5 mb-6">
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-3">What to do next</p>
+              <ul className="space-y-2 text-sm text-slate-600">
+                {[
+                  "Ensure all document photos are clear and well-lit",
+                  "All four corners of the document must be visible",
+                  "Your selfie must clearly match the ID photo",
+                  "Make sure the document is not expired",
+                ].map((tip) => (
+                  <li key={tip} className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                    {tip}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Button
+                onClick={() => { setStep(1); }}
+                className="w-full h-12 rounded-2xl font-bold bg-green-600 hover:bg-green-700 shadow-lg shadow-green-100"
+              >
+                <ShieldCheck className="w-4 h-4 mr-2" />
+                Re-Submit Documents
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/")} className="w-full h-12 rounded-2xl font-bold">
+                Back to Marketplace
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (user?.isVerified) return null;
 
   // ── Step 1: Type Selection ──

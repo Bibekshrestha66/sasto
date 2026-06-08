@@ -338,6 +338,62 @@ export class EmailService {
         `,
         text: `Thank you for your order! Order ID: ${data.orderId}, Product: ${data.listingTitle}, Total: NPR ${data.amount}. Estimated Delivery: ${data.estDeliveryDate}.`,
       }),
+      verification_rejected: (data) => ({
+        subject: `Action Required: Your ${data.verificationType} Verification Was Rejected`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 32px;">
+            <div style="background: white; border-radius: 16px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+              <div style="text-align: center; margin-bottom: 24px;">
+                <div style="background: #fee2e2; width: 64px; height: 64px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                  <span style="font-size: 32px;">❌</span>
+                </div>
+                <h1 style="color: #991b1b; margin: 0; font-size: 24px;">Verification Rejected</h1>
+              </div>
+              <p style="color: #374151;">Hi <strong>${data.userName}</strong>,</p>
+              <p style="color: #374151;">Unfortunately, your <strong>${data.verificationType}</strong> verification documents were reviewed and could not be approved at this time.</p>
+              <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                <p style="color: #991b1b; font-weight: bold; margin: 0 0 8px;">Reason for Rejection:</p>
+                <p style="color: #7f1d1d; margin: 0;">${data.rejectionReason}</p>
+              </div>
+              <p style="color: #374151;">Please correct the issues mentioned above and resubmit your documents. You can do this by visiting your verification page.</p>
+              <div style="text-align: center; margin-top: 28px;">
+                <a href="${data.verificationLink}" style="background: #16a34a; color: white; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: bold; font-size: 16px;">Re-Submit Documents</a>
+              </div>
+              <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 28px;">If you have questions, please contact our support team.</p>
+            </div>
+          </div>
+        `,
+        text: `Hi ${data.userName}, your ${data.verificationType} verification was rejected. Reason: ${data.rejectionReason}. Please re-submit at: ${data.verificationLink}`,
+      }),
+      verification_approved: (data) => ({
+        subject: `🎉 Congratulations! Your Account is Now Verified`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 32px;">
+            <div style="background: white; border-radius: 16px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+              <div style="text-align: center; margin-bottom: 24px;">
+                <div style="background: #dcfce7; width: 64px; height: 64px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                  <span style="font-size: 32px;">✅</span>
+                </div>
+                <h1 style="color: #166534; margin: 0; font-size: 24px;">Verification Approved!</h1>
+              </div>
+              <p style="color: #374151;">Hi <strong>${data.userName}</strong>,</p>
+              <p style="color: #374151;">Great news! Your <strong>${data.verificationType}</strong> verification has been approved. Your account is now fully verified on Sasto Marketplace.</p>
+              <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                <p style="color: #166534; font-weight: bold; margin: 0 0 8px;">✨ You can now:</p>
+                <ul style="color: #14532d; margin: 0; padding-left: 20px;">
+                  <li>Post listings and sell on Sasto</li>
+                  <li>Access all marketplace features</li>
+                  <li>Build trust with the verified badge</li>
+                </ul>
+              </div>
+              <div style="text-align: center; margin-top: 28px;">
+                <a href="${data.marketplaceLink}" style="background: #16a34a; color: white; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: bold; font-size: 16px;">Go to Marketplace</a>
+              </div>
+            </div>
+          </div>
+        `,
+        text: `Hi ${data.userName}, your ${data.verificationType} verification has been approved! You can now sell on Sasto Marketplace.`,
+      }),
       order_seller_notification: (data) => ({
         subject: `Product Sold: ${data.orderId}`,
         html: `

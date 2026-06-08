@@ -45,6 +45,10 @@ export default function SuperAdminDashboard() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  // Verification rejection modal state
+  const [verRejectModalOpen, setVerRejectModalOpen] = useState(false);
+  const [verRejectSubId, setVerRejectSubId] = useState<number | null>(null);
+  const [verRejectReason, setVerRejectReason] = useState("");
 
   // Advanced Analytics State
   const [timeframe, setTimeframe] = useState<"daily" | "weekly" | "bi_weekly" | "monthly" | "quarterly" | "half_year" | "yearly" | "custom">("monthly");
@@ -1354,6 +1358,51 @@ export default function SuperAdminDashboard() {
 
           {/* VERIFICATIONS */}
           <TabsContent value="verifications">
+            {/* Rejection Reason Modal */}
+            {verRejectModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                      <XCircle className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-gray-900">Reject Verification</h3>
+                      <p className="text-xs text-gray-500">This reason will be sent to the user by notification and email.</p>
+                    </div>
+                  </div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Reason for Rejection <span className="text-red-500">*</span></label>
+                  <textarea
+                    className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400 bg-gray-50"
+                    rows={4}
+                    placeholder="e.g. Document image is blurry, ID appears expired, Selfie does not match ID..."
+                    value={verRejectReason}
+                    onChange={(e) => setVerRejectReason(e.target.value)}
+                  />
+                  <div className="flex gap-3 mt-4">
+                    <Button variant="outline" className="flex-1" onClick={() => { setVerRejectModalOpen(false); setVerRejectReason(""); setVerRejectSubId(null); }}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      disabled={!verRejectReason.trim() || reviewVerificationMutation.isPending}
+                      onClick={() => {
+                        if (!verRejectSubId || !verRejectReason.trim()) return;
+                        reviewVerificationMutation.mutate(
+                          { submissionId: verRejectSubId, status: "rejected", adminNotes: verRejectReason.trim() },
+                          { onSettled: () => { setVerRejectModalOpen(false); setVerRejectReason(""); setVerRejectSubId(null); } }
+                        );
+                      }}
+                    >
+                      {reviewVerificationMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                      Confirm Rejection
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
              <Card className="border-none shadow-md">
                 <CardHeader>
                   <CardTitle className="text-base font-black">Pending Verification Requests</CardTitle>
@@ -1385,7 +1434,7 @@ export default function SuperAdminDashboard() {
                                   <UserCheck className="w-3.5 h-3.5 mr-1.5" />Approve
                                 </Button>
                                 <Button size="sm" variant="destructive" className="h-9 px-4"
-                                  onClick={() => reviewVerificationMutation.mutate({ submissionId: sub.id, status: "rejected", adminNotes: "Invalid documents" })}>
+                                  onClick={() => { setVerRejectSubId(sub.id); setVerRejectReason(""); setVerRejectModalOpen(true); }}>
                                   <XCircle className="w-3.5 h-3.5 mr-1.5" />Reject
                                 </Button>
                               </div>

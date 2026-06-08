@@ -3,8 +3,9 @@ import { adminProcedure, publicProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { encryptMessage, decryptMessage } from "../_core/crypto";
 import { getDb, updateCompanyConfig, getAllReports, resolveReport, createCareerOpening, archiveCareerOpening, getPaymentGateways, updatePaymentGateway } from "../db";
-import { users, listings, disputes, adminLogs, flaggedListings, verificationSubmissions, transactions, categories, messages, logisticsPartners, companyConfigs } from "../../drizzle/schema";
+import { users, listings, disputes, adminLogs, flaggedListings, verificationSubmissions, transactions, categories, messages, logisticsPartners, companyConfigs, notifications } from "../../drizzle/schema";
 import { eq, desc, sql, gte, and, or } from "drizzle-orm";
+import { emailService } from "../_core/emailService";
 
 export const adminRouter = router({
   // User Management
@@ -670,6 +671,17 @@ export const adminRouter = router({
         })
         .where(eq(verificationSubmissions.id, input.submissionId));
 
+      // Fetch the user's email and name for notifications
+      const targetUser = await db
+        .select({ email: users.email, name: users.name })
+        .from(users)
+        .where(eq(users.id, submission[0].userId))
+        .limit(1);
+      const userEmail = targetUser[0]?.email || "";
+      const userName = targetUser[0]?.name || "User";
+      const verificationType = submission[0].type === "kyb" ? "KYB (Business)" : "KYC (Individual)";
+      const appUrl = process.env.VITE_APP_URL || "https://sasto-ochre.vercel.app";
+
       if (input.status === "approved") {
         // Get the current user to check their role
         const currentUser = await db.select({ role: users.role }).from(users).where(eq(users.id, submission[0].userId)).limit(1);
@@ -685,10 +697,61 @@ export const adminRouter = router({
             updatedAt: new Date(),
           })
           .where(eq(users.id, submission[0].userId));
+
+        // In-app notification for approval
+        await db.insert(notifications).values({
+          userId: submission[0].userId,
+          type: "verification_approved",
+          title: "🎉 Verification Approved!",
+          content: `Your ${verificationType} verification has been approved. You can now post listings and sell on Sasto Marketplace.`,
+          isRead: false,
+        });
+
+        // Email notification for approval
+        if (userEmail) {
+          await emailService.sendEmail({
+            to: userEmail,
+            subject: "Verification Approved",
+            template: "verification_approved",
+            templateData: {
+              userName,
+              verificationType,
+              marketplaceLink: `${appUrl}/marketplace`,
+            },
+            userId: submission[0].userId,
+          });
+        }
       } else {
         await db.update(users)
           .set({ verificationStatus: "rejected", updatedAt: new Date() })
           .where(eq(users.id, submission[0].userId));
+
+        const rejectionReason = input.adminNotes || "Your documents did not meet our verification requirements.";
+
+        // In-app notification for rejection
+        await db.insert(notifications).values({
+          userId: submission[0].userId,
+          type: "verification_rejected",
+          title: "❌ Verification Rejected",
+          content: `Your ${verificationType} verification was rejected. Reason: ${rejectionReason}. Please re-submit your documents.`,
+          isRead: false,
+        });
+
+        // Email notification for rejection
+        if (userEmail) {
+          await emailService.sendEmail({
+            to: userEmail,
+            subject: "Action Required: Verification Rejected",
+            template: "verification_rejected",
+            templateData: {
+              userName,
+              verificationType,
+              rejectionReason,
+              verificationLink: `${appUrl}/verify`,
+            },
+            userId: submission[0].userId,
+          });
+        }
       }
 
       await db.insert(adminLogs).values({
