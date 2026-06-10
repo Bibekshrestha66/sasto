@@ -254,9 +254,6 @@ export default function Profile() {
       </div>
     );
   }
-
-  const isProfessional = ["seller", "dealer", "wholesaler", "distributor", "admin", "super_admin"].includes(user.role);
-
   return (
     <div className="min-h-screen bg-slate-50/50 pb-20">
       {/* Banner Section with Upload */}
