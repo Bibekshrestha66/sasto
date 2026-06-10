@@ -44,6 +44,16 @@ async function startServer() {
       console.log(`  - Local:   http://localhost:${port}/`);
       console.log(`  - Network: http://${localIp}:${port}/`);
       console.log(`[WebSocket] Available at ws://${localIp}:${port}`);
+
+      // Prevent Render free-tier sleep by self-pinging every 14 mins
+      if (process.env.RENDER_EXTERNAL_URL) {
+        console.log(`[KeepAlive] Activated for ${process.env.RENDER_EXTERNAL_URL}`);
+        setInterval(() => {
+          fetch(process.env.RENDER_EXTERNAL_URL as string)
+            .then(res => console.log(`[KeepAlive] Pinged successfully: ${res.status}`))
+            .catch(err => console.error(`[KeepAlive] Ping failed:`, err.message));
+        }, 14 * 60 * 1000);
+      }
     });
   };
 
