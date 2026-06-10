@@ -36,34 +36,37 @@ interface Auction {
 
 const CATEGORIES = [
   { id: "all", name: "All Categories", icon: Sparkles },
-  { id: "antiques", name: "Antiques & Collectibles", icon: Gem },
-  { id: "electronics", name: "Electronics", icon: Tv },
-  { id: "property", name: "Property", icon: Home },
-  { id: "vehicles", name: "Vehicle", icon: Car },
+  { id: "Collectibles & Luxury", name: "Collectibles & Luxury", icon: Gem },
+  { id: "Electronics", name: "Electronics", icon: Tv },
+  { id: "Property", name: "Property", icon: Home },
+  { id: "Vehicle", name: "Vehicle", icon: Car },
 ];
 
 const SUBCATEGORIES: Record<string, { id: string, name: string }[]> = {
-  property: [
-    { id: "land", name: "Land" },
-    { id: "apartment", name: "Apartments" },
-    { id: "house", name: "Houses" },
+  Property: [
+    { id: "Residential Auctions", name: "Residential" },
+    { id: "Commercial Auctions", name: "Commercial" },
+    { id: "Land Auctions", name: "Land" },
+    { id: "Industrial Auctions", name: "Industrial" },
   ],
-  vehicles: [
-    { id: "bike", name: "Bikes" },
-    { id: "car", name: "Cars" },
-    { id: "heavy", name: "Heavy Vehicles" },
+  Vehicle: [
+    { id: "Cars & SUVs", name: "Cars & SUVs" },
+    { id: "Motorcycles", name: "Motorcycles" },
+    { id: "Buses & Trucks", name: "Buses & Trucks" },
+    { id: "Spare Parts", name: "Spare Parts" },
   ],
-  electronics: [
-    { id: "mobile", name: "Mobile Phones" },
-    { id: "laptop", name: "Laptops" },
-    { id: "camera", name: "Cameras" },
+  Electronics: [
+    { id: "Mobile Phones", name: "Mobile Phones" },
+    { id: "Laptops & Computers", name: "Laptops" },
+    { id: "Cameras & Photography", name: "Cameras" },
+    { id: "TVs & Audio", name: "TVs & Audio" },
   ],
-  antiques: [
-    { id: "statue", name: "Statues" },
-    { id: "jewelry", name: "Jewelry" },
-    { id: "art", name: "Art & Paintings" },
-    { id: "coins", name: "Coins" },
-  ]
+  "Collectibles & Luxury": [
+    { id: "Art & Antiques", name: "Art & Antiques" },
+    { id: "Jewelry & Watches", name: "Jewelry & Watches" },
+    { id: "Fashion & Accessories", name: "Fashion" },
+    { id: "Rare Collectibles", name: "Rare Collectibles" },
+  ],
 };
 
 // Global timer for TimeRemaining components

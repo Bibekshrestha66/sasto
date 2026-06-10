@@ -218,12 +218,12 @@ export const searchRouter = router({
       try {
         const db = await getDb();
         const rows = await db.execute(sql`
-          SELECT u.id, u.name, u.is_verified,
+          SELECT u.id, u.name, u."isVerified",
                  COUNT(l.id) AS total_listings
           FROM users u
           LEFT JOIN listings l ON l."userId" = u.id
           WHERE u.role IN ('seller', 'dealer', 'wholesaler', 'distributor')
-          GROUP BY u.id, u.name, u.is_verified
+          GROUP BY u.id, u.name, u."isVerified"
           HAVING COUNT(l.id) > 0
           ORDER BY total_listings DESC
           LIMIT 5
@@ -233,7 +233,7 @@ export const searchRouter = router({
           id: String(r.id),
           name: r.name || 'Anonymous Seller',
           totalListings: Number(r.total_listings),
-          verificationStatus: r.is_verified ? 'verified' as const : 'unverified' as const,
+          verificationStatus: r.isVerified ? 'verified' as const : 'unverified' as const,
         }));
       } catch (error) {
         console.error('Top sellers error:', error);
