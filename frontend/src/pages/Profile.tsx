@@ -75,7 +75,24 @@ const useFileUpload = () => {
 export default function Profile() {
   const { user, logout, refresh } = useAuth();
   const utils = trpc.useUtils();
-  const [activeTab, setActiveTab] = useState("listings");
+  
+  const isProfessional = user ? ["seller", "dealer", "wholesaler", "distributor", "admin", "super_admin"].includes(user.role) : false;
+  
+  const [activeTab, setActiveTab] = useState(isProfessional ? "listings" : "settings");
+  
+  // Ensure the tab defaults to settings if user changes or loads and is not professional
+  useEffect(() => {
+    if (user) {
+      const isProf = ["seller", "dealer", "wholesaler", "distributor", "admin", "super_admin"].includes(user.role);
+      if (!isProf && activeTab !== "settings") {
+        setActiveTab("settings");
+      } else if (isProf && activeTab === "settings" && !window.location.hash.includes("settings")) {
+        // Only switch back to listings automatically if they didn't explicitly want settings
+        setActiveTab("listings");
+      }
+    }
+  }, [user]);
+
   const [selectedDealListing, setSelectedDealListing] = useState<any | null>(null);
   const [dealPrice, setDealPrice] = useState<string>("");
   const [originalPrice, setOriginalPrice] = useState<string>("");
@@ -222,14 +239,14 @@ export default function Profile() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="p-10 text-center border-none shadow-2xl rounded-[2.5rem] bg-white max-w-md w-full">
-          <div className="w-24 h-24 bg-orange-50 rounded-[2rem] mx-auto flex items-center justify-center text-orange-600 mb-8">
+          <div className="w-24 h-24 bg-green-50 rounded-[2rem] mx-auto flex items-center justify-center text-green-600 mb-8">
             <User className="w-12 h-12" />
           </div>
           <h2 className="text-3xl font-black text-gray-900 mb-3">Login Required</h2>
           <p className="text-gray-500 font-medium mb-10">Access your premium profile dashboard.</p>
           <Button 
             onClick={() => navigate("/login")}
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black h-16 rounded-2xl shadow-xl"
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-black h-16 rounded-2xl shadow-xl"
           >
             Access My Profile
           </Button>
@@ -279,7 +296,7 @@ export default function Profile() {
             <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white/80 backdrop-blur-xl overflow-hidden sticky top-8">
               <div className="p-8 text-center">
                 <div className="relative inline-block mb-6 group">
-                  <div className="w-32 h-32 bg-white rounded-[2.5rem] mx-auto flex items-center justify-center text-orange-600 text-4xl font-black shadow-2xl border-8 border-white overflow-hidden transition-transform group-hover:rotate-3">
+                  <div className="w-32 h-32 bg-white rounded-[2.5rem] mx-auto flex items-center justify-center text-green-600 text-4xl font-black shadow-2xl border-8 border-white overflow-hidden transition-transform group-hover:rotate-3">
                     {user.avatar ? (
                       <img src={user.avatar} className="w-full h-full object-cover" alt={`${user.name || "User"}'s avatar`} />
                     ) : (
@@ -288,7 +305,7 @@ export default function Profile() {
                   </div>
                   <button
                     onClick={() => avatarInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 bg-orange-600 p-2 rounded-full text-white shadow-lg hover:bg-orange-700 transition-all"
+                    className="absolute bottom-0 right-0 bg-green-600 p-2 rounded-full text-white shadow-lg hover:bg-green-700 transition-all"
                     aria-label="Upload avatar"
                     disabled={isUploadingAvatar}
                   >
@@ -320,7 +337,7 @@ export default function Profile() {
                   )}
                 </h2>
                 <div className="flex items-center justify-center gap-2 mb-6">
-                  <Badge className="bg-orange-100 text-orange-600 border-none px-3 py-1 rounded-lg font-black uppercase text-[10px]">
+                  <Badge className="bg-green-100 text-green-600 border-none px-3 py-1 rounded-lg font-black uppercase text-[10px]">
                     {user.role}
                   </Badge>
                   {isProfessional && (
@@ -347,20 +364,20 @@ export default function Profile() {
 
                 <div className="space-y-3 text-left bg-slate-50/50 p-5 rounded-3xl border border-slate-100">
                   <div className="flex items-center gap-3 text-slate-600">
-                    <Mail className="w-4 h-4 text-orange-500" />
+                    <Mail className="w-4 h-4 text-green-500" />
                     <span className="text-sm font-bold truncate">{user.email}</span>
                   </div>
                   <div className="flex items-center gap-3 text-slate-600">
-                    <Phone className="w-4 h-4 text-orange-500" />
+                    <Phone className="w-4 h-4 text-green-500" />
                     <span className="text-sm font-bold">{user.phone || "Not provided"}</span>
                   </div>
                   <div className="flex items-center gap-3 text-slate-600">
-                    <MapPin className="w-4 h-4 text-orange-500" />
+                    <MapPin className="w-4 h-4 text-green-500" />
                     <span className="text-sm font-bold">{user.location || "Nepal"}</span>
                   </div>
                   {user.experienceYears && (
                     <div className="flex items-center gap-3 text-slate-600">
-                      <Briefcase className="w-4 h-4 text-orange-500" />
+                      <Briefcase className="w-4 h-4 text-green-500" />
                       <span className="text-sm font-bold">{user.experienceYears} Years Experience</span>
                     </div>
                   )}
@@ -386,7 +403,7 @@ export default function Profile() {
                   <Button 
                     variant="outline"
                     onClick={() => setActiveTab("settings")}
-                    className="w-full border-2 border-slate-100 hover:border-orange-500 hover:bg-orange-50 rounded-2xl font-black py-6"
+                    className="w-full border-2 border-slate-100 hover:border-green-500 hover:bg-green-50 rounded-2xl font-black py-6"
                   >
                     <Edit2 className="w-4 h-4 mr-2" />
                     Complete Profile
@@ -405,29 +422,35 @@ export default function Profile() {
           </div>
 
           {/* Right Column: Tabs */}
-          <div className="lg:col-span-8">
+          <div className={`lg:col-span-8 ${!isProfessional ? "lg:col-start-3" : ""}`}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-              <TabsList className="w-full bg-white/50 backdrop-blur-md p-1.5 rounded-[2rem] h-auto grid grid-cols-4 gap-2 shadow-xl">
-                <TabsTrigger value="listings" className="rounded-2xl py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-orange-600 data-[state=active]:text-white">
-                  <Package className="w-4 h-4 mr-2" />
-                  Listings
-                </TabsTrigger>
-                <TabsTrigger value="deals" className="rounded-2xl py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-orange-600 data-[state=active]:text-white">
-                  <Tag className="w-4 h-4 mr-2" />
-                  My Deals
-                </TabsTrigger>
-                <TabsTrigger value="reviews" className="rounded-2xl py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-orange-600 data-[state=active]:text-white">
-                  <Star className="w-4 h-4 mr-2" />
-                  Reviews
-                </TabsTrigger>
-                <TabsTrigger value="settings" className="rounded-2xl py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-orange-600 data-[state=active]:text-white">
+              <TabsList className={`w-full bg-white/50 backdrop-blur-md p-1.5 rounded-[2rem] h-auto grid gap-2 shadow-xl ${isProfessional ? 'grid-cols-4' : 'grid-cols-1 max-w-md mx-auto'}`}>
+                {isProfessional && (
+                  <>
+                    <TabsTrigger value="listings" className="rounded-2xl py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                      <Package className="w-4 h-4 mr-2" />
+                      Listings
+                    </TabsTrigger>
+                    <TabsTrigger value="deals" className="rounded-2xl py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                      <Tag className="w-4 h-4 mr-2" />
+                      My Deals
+                    </TabsTrigger>
+                    <TabsTrigger value="reviews" className="rounded-2xl py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                      <Star className="w-4 h-4 mr-2" />
+                      Reviews
+                    </TabsTrigger>
+                  </>
+                )}
+                <TabsTrigger value="settings" className="rounded-2xl py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white">
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
                 </TabsTrigger>
               </TabsList>
 
-              {/* Listings Tab */}
-              <TabsContent value="listings" className="mt-0">
+              {isProfessional && (
+                <>
+                  {/* Listings Tab */}
+                  <TabsContent value="listings" className="mt-0">
                 <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white">
                   <div className="flex items-center justify-between mb-8">
                     <div>
@@ -439,7 +462,7 @@ export default function Profile() {
                     </Button>
                   </div>
                   {listingsLoading ? (
-                    <div className="py-20 text-center"><Loader2 className="animate-spin w-8 h-8 text-orange-600 mx-auto" /></div>
+                    <div className="py-20 text-center"><Loader2 className="animate-spin w-8 h-8 text-green-600 mx-auto" /></div>
                   ) : myListings.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {myListings.map((listing) => (
@@ -453,7 +476,7 @@ export default function Profile() {
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-black text-slate-900 truncate group-hover/item:text-orange-600">{listing.title}</h4>
+                              <h4 className="font-black text-slate-900 truncate group-hover/item:text-green-600">{listing.title}</h4>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-lg font-black text-slate-900">NPR {Number(listing.price || 0).toLocaleString()}</span>
                                 {listing.discount && <Badge className="bg-green-100 text-green-600 text-[9px] font-black">-{listing.discount}%</Badge>}
@@ -473,7 +496,7 @@ export default function Profile() {
                               }} aria-label="Manage deal price">
                                 <Tag className="w-4 h-4" />
                               </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg text-slate-300 hover:text-orange-500 hover:bg-orange-50" onClick={() => navigate(`/listing/${listing.id}`)} aria-label="View listing">
+                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg text-slate-300 hover:text-green-500 hover:bg-green-50" onClick={() => navigate(`/listing/${listing.id}`)} aria-label="View listing">
                                 <ArrowUpRight className="w-4 h-4" />
                               </Button>
                             </div>
@@ -485,7 +508,7 @@ export default function Profile() {
                     <div className="text-center py-20 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
                       <Package className="w-16 h-16 text-slate-200 mx-auto mb-4" />
                       <p className="text-slate-400 font-black uppercase text-sm">No listings yet</p>
-                      <Button variant="link" onClick={() => navigate("/post-listing")} className="text-orange-600 font-black mt-2">Start Selling</Button>
+                      <Button variant="link" onClick={() => navigate("/post-listing")} className="text-green-600 font-black mt-2">Start Selling</Button>
                     </div>
                   )}
                 </Card>
@@ -499,14 +522,14 @@ export default function Profile() {
                       <h3 className="text-2xl font-black text-slate-900">My Active Deals</h3>
                       <p className="text-slate-400 font-bold text-sm">Items with discounts.</p>
                     </div>
-                    <Badge className="bg-orange-50 text-orange-600 border-none px-4 py-2 rounded-xl font-black uppercase text-xs">{myDeals.length} Active Deals</Badge>
+                    <Badge className="bg-green-50 text-green-600 border-none px-4 py-2 rounded-xl font-black uppercase text-xs">{myDeals.length} Active Deals</Badge>
                   </div>
                   {myDeals.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {myDeals.map((listing) => (
                         <div key={listing.id} className="relative group/deal">
                           <div className="absolute -top-2 -right-2 z-20 bg-red-600 text-white text-[10px] font-black px-3 py-1.5 rounded-xl shadow-xl animate-pulse">-{listing.discount}% OFF</div>
-                          <Card className="overflow-hidden border-2 border-slate-50 hover:border-orange-200 transition-all rounded-[2rem] bg-white">
+                          <Card className="overflow-hidden border-2 border-slate-50 hover:border-green-200 transition-all rounded-[2rem] bg-white">
                             <div className="relative h-40">
                               {(listing.images as any)?.[0] ? (
                                 <img src={(listing.images as any)[0]} className="w-full h-full object-cover transition-transform group-hover/deal:scale-110" alt={listing.title} />
@@ -521,7 +544,7 @@ export default function Profile() {
                                 <span className="text-2xl font-black text-slate-900">NPR {Number(listing.price || 0).toLocaleString()}</span>
                                 <span className="text-sm font-bold text-slate-400 line-through mb-1">NPR {Number(listing.originalPrice || 0).toLocaleString()}</span>
                               </div>
-                              <Button className="w-full bg-slate-50 hover:bg-orange-600 hover:text-white font-black rounded-xl" onClick={() => navigate(`/listing/${listing.id}`)}>View Deal</Button>
+                              <Button className="w-full bg-slate-50 hover:bg-green-600 hover:text-white font-black rounded-xl" onClick={() => navigate(`/listing/${listing.id}`)}>View Deal</Button>
                             </div>
                           </Card>
                         </div>
@@ -541,7 +564,7 @@ export default function Profile() {
                 <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white">
                   <h3 className="text-2xl font-black text-slate-900 mb-8">Recent Feedback</h3>
                   {reviewsLoading ? (
-                    <div className="py-20 text-center"><Loader2 className="animate-spin w-8 h-8 text-orange-600 mx-auto" /></div>
+                    <div className="py-20 text-center"><Loader2 className="animate-spin w-8 h-8 text-green-600 mx-auto" /></div>
                   ) : userReviews.length > 0 ? (
                     <div className="space-y-6">
                       {userReviews.map((review) => (
@@ -558,7 +581,7 @@ export default function Profile() {
                             </div>
                             <div className="flex gap-0.5">
                               {[...Array(5)].map((_, j) => (
-                                <Star key={j} className={`w-4 h-4 ${j < review.rating ? "fill-orange-500 text-orange-500" : "text-slate-200"}`} />
+                                <Star key={j} className={`w-4 h-4 ${j < review.rating ? "fill-orange-500 text-green-500" : "text-slate-200"}`} />
                               ))}
                             </div>
                           </div>
@@ -574,6 +597,8 @@ export default function Profile() {
                   )}
                 </Card>
               </TabsContent>
+              </>
+            )}
 
               {/* Settings Tab */}
               <TabsContent value="settings" className="mt-0">
@@ -616,12 +641,12 @@ export default function Profile() {
                         name="bio"
                         value={formData.bio}
                         onChange={handleChange}
-                        className="w-full p-6 bg-slate-50 border-none rounded-3xl font-bold min-h-[150px] focus:ring-2 focus:ring-orange-500 outline-none"
+                        className="w-full p-6 bg-slate-50 border-none rounded-3xl font-bold min-h-[150px] focus:ring-2 focus:ring-green-500 outline-none"
                         placeholder="Tell buyers about yourself or your business..."
                       />
                     </div>
                     <div className="flex gap-4 pt-6">
-                      <Button onClick={handleSave} disabled={updateProfile.isPending} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white h-16 rounded-[1.5rem] font-black shadow-xl text-lg">
+                      <Button onClick={handleSave} disabled={updateProfile.isPending} className="flex-1 bg-green-600 hover:bg-green-700 text-white h-16 rounded-[1.5rem] font-black shadow-xl text-lg">
                         {updateProfile.isPending ? "Saving..." : "Save All Changes"}
                       </Button>
                     </div>

@@ -66,7 +66,7 @@ export default function BuyerDashboard() {
 
   const stats = [
     { label: "Bookings", value: bookings.length, icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Orders", value: transactions.length, icon: ShoppingCart, color: "text-orange-600", bg: "bg-orange-50" },
+    { label: "Orders", value: transactions.length, icon: ShoppingCart, color: "text-green-600", bg: "bg-green-50" },
     { label: "Favorites", value: favorites.length, icon: Heart, color: "text-rose-600", bg: "bg-rose-50" },
     { 
       label: "Total Spent", 
@@ -90,7 +90,7 @@ export default function BuyerDashboard() {
             </div>
             <div className="flex gap-2 mt-2 sm:mt-0">
               <Button 
-                className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl md:rounded-2xl h-10 md:h-12 px-4 md:px-6 shadow-lg shadow-orange-100 text-xs md:text-sm" 
+                className="bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl md:rounded-2xl h-10 md:h-12 px-4 md:px-6 shadow-lg shadow-green-100 text-xs md:text-sm" 
                 onClick={() => setLocation("/")}
               >
                 <Search className="w-4 h-4 mr-2" />
@@ -167,7 +167,7 @@ export default function BuyerDashboard() {
                 <div className="lg:col-span-7 space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-2xl font-black text-gray-900 tracking-tight">Recent Orders</h3>
-                    <Button variant="ghost" className="font-bold text-orange-500" onClick={() => { setActiveTab("purchases"); setPurchaseSubTab("orders"); }}>
+                    <Button variant="ghost" className="font-bold text-green-500" onClick={() => { setActiveTab("purchases"); setPurchaseSubTab("orders"); }}>
                       View All <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
@@ -187,12 +187,12 @@ export default function BuyerDashboard() {
                             <Clock className="w-3.5 h-3.5" />
                             Ordered {new Date(item.createdAt).toLocaleDateString()}
                           </p>
-                          <p className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-md font-black uppercase w-fit mt-1.5">
+                          <p className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-md font-black uppercase w-fit mt-1.5">
                             {item.deliverySpeed} Delivery
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-black text-orange-600 text-lg">NPR {Number(item.amount + (item.deliveryFee || 0)).toLocaleString()}</p>
+                          <p className="font-black text-green-600 text-lg">NPR {Number(item.amount + (item.deliveryFee || 0)).toLocaleString()}</p>
                           <Badge className="bg-green-50 text-green-600 border-none rounded-lg uppercase text-[10px] font-black mt-1">
                             {item.status}
                           </Badge>
@@ -212,7 +212,7 @@ export default function BuyerDashboard() {
                 <div className="lg:col-span-5 space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-2xl font-black text-gray-900 tracking-tight">Active Bids</h3>
-                    <Button variant="ghost" className="font-bold text-orange-500" onClick={() => setActiveTab("bids")}>
+                    <Button variant="ghost" className="font-bold text-green-500" onClick={() => setActiveTab("bids")}>
                       View All <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
@@ -221,7 +221,7 @@ export default function BuyerDashboard() {
                       <Card key={bid.id} className="p-6 border-none shadow-lg rounded-3xl bg-white">
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="font-black text-gray-900 truncate">{bid.auctionTitle}</h4>
-                          <Badge className="bg-orange-50 text-orange-600 border-none rounded-lg uppercase text-[10px] font-black">
+                          <Badge className="bg-green-50 text-green-600 border-none rounded-lg uppercase text-[10px] font-black">
                             Live
                           </Badge>
                         </div>
@@ -310,7 +310,7 @@ export default function BuyerDashboard() {
                               <Badge className="bg-green-50 text-green-700 border-none rounded-lg uppercase text-[10px] font-black px-2.5 py-1">
                                 {item.status}
                               </Badge>
-                              <Badge className="bg-orange-50 text-orange-700 border-none rounded-lg uppercase text-[10px] font-black px-2.5 py-1">
+                              <Badge className="bg-green-50 text-green-700 border-none rounded-lg uppercase text-[10px] font-black px-2.5 py-1">
                                 {item.deliverySpeed} Delivery
                               </Badge>
                             </div>
@@ -328,7 +328,7 @@ export default function BuyerDashboard() {
                             </div>
                             <div>
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Paid</p>
-                              <p className="font-black text-orange-600 text-sm">NPR {Number(item.amount + (item.deliveryFee || 0)).toLocaleString()}</p>
+                              <p className="font-black text-green-600 text-sm">NPR {Number(item.amount + (item.deliveryFee || 0)).toLocaleString()}</p>
                               <p className="text-[10px] text-slate-400 uppercase">via {item.paymentMethod}</p>
                             </div>
                             <div>
@@ -450,7 +450,7 @@ export default function BuyerDashboard() {
                             </div>
                             <div>
                               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Paid</p>
-                              <p className="font-black text-orange-600">NPR {Number(item.totalPrice).toLocaleString()}</p>
+                              <p className="font-black text-green-600">NPR {Number(item.totalPrice).toLocaleString()}</p>
                             </div>
                             <div className="flex items-end">
                               <Button size="sm" variant="ghost" className="text-blue-500 font-black text-xs uppercase tracking-widest p-0 h-auto hover:bg-transparent">
@@ -499,11 +499,11 @@ export default function BuyerDashboard() {
                     <div className="p-6">
                       <h4 className="font-black text-gray-900 text-lg mb-1 truncate">{item.title}</h4>
                       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-4">
-                        <MapPin className="w-3.5 h-3.5 text-orange-500" />
+                        <MapPin className="w-3.5 h-3.5 text-green-500" />
                         {item.location}
                       </p>
                       <div className="flex items-center justify-between">
-                        <p className="text-xl font-black text-orange-600">NPR {Number(item.price || 0).toLocaleString()}</p>
+                        <p className="text-xl font-black text-green-600">NPR {Number(item.price || 0).toLocaleString()}</p>
                         <Button size="sm" className="bg-gray-900 text-white hover:bg-gray-800 rounded-xl px-4 font-bold h-10">
                           View Item
                         </Button>
@@ -517,7 +517,7 @@ export default function BuyerDashboard() {
                     <h4 className="text-xl font-black text-gray-900 mb-2">Your wishlist is empty</h4>
                     <p className="text-gray-400 font-medium mb-8">Save items you like and they'll show up here.</p>
                     <Button 
-                      className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 px-8 rounded-2xl"
+                      className="bg-green-500 hover:bg-green-600 text-white font-bold h-12 px-8 rounded-2xl"
                       onClick={() => setLocation("/")}
                     >
                       Start Exploring
@@ -543,7 +543,7 @@ export default function BuyerDashboard() {
               </div>
               <div className="space-y-4">
                 {myBids.map((bid: any) => (
-                  <Card key={bid.id} className="p-6 border-none shadow-xl rounded-3xl bg-white group hover:border-orange-200 border-2 border-transparent transition-all">
+                  <Card key={bid.id} className="p-6 border-none shadow-xl rounded-3xl bg-white group hover:border-green-200 border-2 border-transparent transition-all">
                     <div className="flex flex-col md:flex-row md:items-center gap-8">
                       <div className="w-32 h-32 bg-gray-100 rounded-3xl overflow-hidden shrink-0">
                         <img src={bid.image} className="w-full h-full object-cover" alt="" />
@@ -551,7 +551,7 @@ export default function BuyerDashboard() {
                       <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-6">
                         <div className="sm:col-span-1">
                           <h4 className="text-xl font-black text-gray-900 tracking-tight mb-2">{bid.auctionTitle}</h4>
-                          <Badge className="bg-orange-50 text-orange-600 border-none rounded-xl uppercase text-[10px] font-black px-3 py-1">
+                          <Badge className="bg-green-50 text-green-600 border-none rounded-xl uppercase text-[10px] font-black px-3 py-1">
                             Live Auction
                           </Badge>
                         </div>
@@ -602,7 +602,7 @@ export default function BuyerDashboard() {
                             ret.status === "approved" ? "bg-green-50 text-green-700" :
                             ret.status === "rejected" ? "bg-red-50 text-red-700" :
                             ret.status === "refunded" ? "bg-purple-50 text-purple-700" :
-                            "bg-orange-50 text-orange-700"
+                            "bg-green-50 text-green-700"
                           }`}>
                             {ret.status}
                           </Badge>

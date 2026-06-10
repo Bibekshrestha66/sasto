@@ -148,7 +148,7 @@ export default function SellerDashboard() {
               {[
                 { label: "Revenue", value: "NPR " + (metrics?.totalRevenue || 0).toLocaleString(), icon: TrendingUp, color: "text-green-600", bg: "bg-green-50", trend: "+12.5%", positive: true },
                 { label: "Total Sales", value: metrics?.totalSales || 0, icon: ShoppingCart, color: "text-blue-600", bg: "bg-blue-50", trend: "+8.2%", positive: true },
-                { label: "Listings", value: metrics?.activeListings || 0, icon: Layers, color: "text-orange-600", bg: "bg-orange-50", trend: "+2 new", positive: true },
+                { label: "Listings", value: metrics?.activeListings || 0, icon: Layers, color: "text-green-600", bg: "bg-green-50", trend: "+2 new", positive: true },
                 { label: "Rating", value: (metrics?.avgRating || 0).toFixed(1), icon: Star, color: "text-yellow-600", bg: "bg-yellow-50", trend: "from 234", positive: true },
               ].map((stat, idx) => {
                 const Icon = stat.icon;
@@ -208,13 +208,13 @@ export default function SellerDashboard() {
               {/* Side Panels */}
               <div className="lg:col-span-4 space-y-10">
                 <Card className="p-10 border-none shadow-2xl rounded-[48px] bg-white relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -translate-y-16 translate-x-16" />
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full -translate-y-16 translate-x-16" />
                   <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-8">Top Listings</h3>
                   <div className="space-y-6">
                     {topListings?.map((item) => (
                       <div key={item.id} className="flex items-center gap-4 group cursor-pointer">
-                        <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center shrink-0 border border-gray-100 group-hover:bg-orange-50 transition-colors">
-                          <Eye className="w-6 h-6 text-orange-500" />
+                        <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center shrink-0 border border-gray-100 group-hover:bg-green-50 transition-colors">
+                          <Eye className="w-6 h-6 text-green-500" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-black text-gray-900 truncate">{item.title}</p>
@@ -281,7 +281,7 @@ export default function SellerDashboard() {
                       <div className="flex items-center gap-4 mb-3">
                         <h4 className="text-2xl font-black text-gray-900 tracking-tight truncate">{item.title}</h4>
                         <Badge className={`border-none rounded-full px-4 py-1 text-[10px] font-black uppercase ${
-                          item.status === "active" ? "bg-green-50 text-green-600" : "bg-orange-50 text-orange-600"
+                          item.status === "active" ? "bg-green-50 text-green-600" : "bg-green-50 text-green-600"
                         }`}>
                           {item.status}
                         </Badge>
@@ -298,7 +298,7 @@ export default function SellerDashboard() {
                       <div className="flex flex-wrap gap-10">
                         <div>
                           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Price</p>
-                          <p className="text-xl font-black text-orange-600">NPR {(item.price ?? 0).toLocaleString()}</p>
+                          <p className="text-xl font-black text-green-600">NPR {(item.price ?? 0).toLocaleString()}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Views</p>
@@ -313,7 +313,7 @@ export default function SellerDashboard() {
                     <div className="flex lg:flex-col gap-3 shrink-0">
                       {!item.isFeatured ? (
                         <Button 
-                          className="flex-1 lg:w-40 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white rounded-2xl h-14 font-black shadow-xl shadow-orange-100 transition-all"
+                          className="flex-1 lg:w-40 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white rounded-2xl h-14 font-black shadow-xl shadow-green-100 transition-all"
                           onClick={() => { setPromoteListingItem(item); setSelectedTier("basic"); setPromoteModalOpen(true); }}
                         >
                           <Star className="w-4 h-4 mr-2 fill-white" />
@@ -395,13 +395,13 @@ export default function SellerDashboard() {
                 </div>
                 <div>
                   <DialogTitle className="text-2xl font-black text-white">Promote Listing</DialogTitle>
-                  <p className="text-orange-100 text-sm font-medium">Boost visibility across all pages</p>
+                  <p className="text-green-100 text-sm font-medium">Boost visibility across all pages</p>
                 </div>
               </div>
               {promoteListingItem && (
                 <div className="mt-4 bg-white/20 rounded-2xl px-4 py-3">
                   <p className="text-white font-black text-sm truncate">{promoteListingItem.title}</p>
-                  <p className="text-orange-100 text-xs">NPR {(promoteListingItem.price ?? 0).toLocaleString()}</p>
+                  <p className="text-green-100 text-xs">NPR {(promoteListingItem.price ?? 0).toLocaleString()}</p>
                 </div>
               )}
             </div>
@@ -489,7 +489,7 @@ export default function SellerDashboard() {
                   Cancel
                 </Button>
                 <Button
-                  className="flex-1 h-14 rounded-2xl font-black bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white shadow-xl shadow-orange-100"
+                  className="flex-1 h-14 rounded-2xl font-black bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white shadow-xl shadow-green-100"
                   onClick={() => {
                     if (!promoteListingItem) return;
                     if (!selectedPaymentMethod && gateways.length > 0) {
@@ -844,7 +844,7 @@ export default function SellerDashboard() {
                             ret.status === "approved" ? "bg-green-50 text-green-600" :
                             ret.status === "rejected" ? "bg-red-50 text-red-600" :
                             ret.status === "refunded" ? "bg-purple-50 text-purple-600" :
-                            "bg-orange-50 text-orange-600"
+                            "bg-green-50 text-green-600"
                           }`}>
                             {ret.status}
                           </Badge>
