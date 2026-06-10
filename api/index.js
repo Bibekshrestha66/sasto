@@ -2490,6 +2490,62 @@ var EmailService = class {
         `,
         text: `Thank you for your order! Order ID: ${data2.orderId}, Product: ${data2.listingTitle}, Total: NPR ${data2.amount}. Estimated Delivery: ${data2.estDeliveryDate}.`
       }),
+      verification_rejected: (data2) => ({
+        subject: `Action Required: Your ${data2.verificationType} Verification Was Rejected`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 32px;">
+            <div style="background: white; border-radius: 16px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+              <div style="text-align: center; margin-bottom: 24px;">
+                <div style="background: #fee2e2; width: 64px; height: 64px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                  <span style="font-size: 32px;">\u274C</span>
+                </div>
+                <h1 style="color: #991b1b; margin: 0; font-size: 24px;">Verification Rejected</h1>
+              </div>
+              <p style="color: #374151;">Hi <strong>${data2.userName}</strong>,</p>
+              <p style="color: #374151;">Unfortunately, your <strong>${data2.verificationType}</strong> verification documents were reviewed and could not be approved at this time.</p>
+              <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                <p style="color: #991b1b; font-weight: bold; margin: 0 0 8px;">Reason for Rejection:</p>
+                <p style="color: #7f1d1d; margin: 0;">${data2.rejectionReason}</p>
+              </div>
+              <p style="color: #374151;">Please correct the issues mentioned above and resubmit your documents. You can do this by visiting your verification page.</p>
+              <div style="text-align: center; margin-top: 28px;">
+                <a href="${data2.verificationLink}" style="background: #16a34a; color: white; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: bold; font-size: 16px;">Re-Submit Documents</a>
+              </div>
+              <p style="color: #9ca3af; font-size: 13px; text-align: center; margin-top: 28px;">If you have questions, please contact our support team.</p>
+            </div>
+          </div>
+        `,
+        text: `Hi ${data2.userName}, your ${data2.verificationType} verification was rejected. Reason: ${data2.rejectionReason}. Please re-submit at: ${data2.verificationLink}`
+      }),
+      verification_approved: (data2) => ({
+        subject: `\u{1F389} Congratulations! Your Account is Now Verified`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 32px;">
+            <div style="background: white; border-radius: 16px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+              <div style="text-align: center; margin-bottom: 24px;">
+                <div style="background: #dcfce7; width: 64px; height: 64px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                  <span style="font-size: 32px;">\u2705</span>
+                </div>
+                <h1 style="color: #166534; margin: 0; font-size: 24px;">Verification Approved!</h1>
+              </div>
+              <p style="color: #374151;">Hi <strong>${data2.userName}</strong>,</p>
+              <p style="color: #374151;">Great news! Your <strong>${data2.verificationType}</strong> verification has been approved. Your account is now fully verified on Sasto Marketplace.</p>
+              <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                <p style="color: #166534; font-weight: bold; margin: 0 0 8px;">\u2728 You can now:</p>
+                <ul style="color: #14532d; margin: 0; padding-left: 20px;">
+                  <li>Post listings and sell on Sasto</li>
+                  <li>Access all marketplace features</li>
+                  <li>Build trust with the verified badge</li>
+                </ul>
+              </div>
+              <div style="text-align: center; margin-top: 28px;">
+                <a href="${data2.marketplaceLink}" style="background: #16a34a; color: white; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: bold; font-size: 16px;">Go to Marketplace</a>
+              </div>
+            </div>
+          </div>
+        `,
+        text: `Hi ${data2.userName}, your ${data2.verificationType} verification has been approved! You can now sell on Sasto Marketplace.`
+      }),
       order_seller_notification: (data2) => ({
         subject: `Product Sold: ${data2.orderId}`,
         html: `
@@ -3277,6 +3333,11 @@ var adminRouter = router({
       reviewedAt: /* @__PURE__ */ new Date(),
       updatedAt: /* @__PURE__ */ new Date()
     }).where(eq5(verificationSubmissions.id, input.submissionId));
+    const targetUser = await db3.select({ email: users.email, name: users.name }).from(users).where(eq5(users.id, submission[0].userId)).limit(1);
+    const userEmail = targetUser[0]?.email || "";
+    const userName = targetUser[0]?.name || "User";
+    const verificationType = submission[0].type === "kyb" ? "KYB (Business)" : "KYC (Individual)";
+    const appUrl = process.env.VITE_APP_URL || "https://sasto-ochre.vercel.app";
     if (input.status === "approved") {
       const currentUser = await db3.select({ role: users.role }).from(users).where(eq5(users.id, submission[0].userId)).limit(1);
       const currentRole = currentUser[0]?.role;
@@ -3288,8 +3349,50 @@ var adminRouter = router({
         role: currentRole === "user" ? "seller" : currentRole,
         updatedAt: /* @__PURE__ */ new Date()
       }).where(eq5(users.id, submission[0].userId));
+      await db3.insert(notifications).values({
+        userId: submission[0].userId,
+        type: "verification_approved",
+        title: "\u{1F389} Verification Approved!",
+        content: `Your ${verificationType} verification has been approved. You can now post listings and sell on Sasto Marketplace.`,
+        isRead: false
+      });
+      if (userEmail) {
+        await emailService.sendEmail({
+          to: userEmail,
+          subject: "Verification Approved",
+          template: "verification_approved",
+          templateData: {
+            userName,
+            verificationType,
+            marketplaceLink: `${appUrl}/marketplace`
+          },
+          userId: submission[0].userId
+        });
+      }
     } else {
       await db3.update(users).set({ verificationStatus: "rejected", updatedAt: /* @__PURE__ */ new Date() }).where(eq5(users.id, submission[0].userId));
+      const rejectionReason = input.adminNotes || "Your documents did not meet our verification requirements.";
+      await db3.insert(notifications).values({
+        userId: submission[0].userId,
+        type: "verification_rejected",
+        title: "\u274C Verification Rejected",
+        content: `Your ${verificationType} verification was rejected. Reason: ${rejectionReason}. Please re-submit your documents.`,
+        isRead: false
+      });
+      if (userEmail) {
+        await emailService.sendEmail({
+          to: userEmail,
+          subject: "Action Required: Verification Rejected",
+          template: "verification_rejected",
+          templateData: {
+            userName,
+            verificationType,
+            rejectionReason,
+            verificationLink: `${appUrl}/verify`
+          },
+          userId: submission[0].userId
+        });
+      }
     }
     await db3.insert(adminLogs).values({
       adminId: ctx.user.id,
@@ -4673,12 +4776,12 @@ var searchRouter = router({
     try {
       const db3 = await getDb();
       const rows = await db3.execute(sql4`
-          SELECT u.id, u.name, u.is_verified,
+          SELECT u.id, u.name, u."isVerified",
                  COUNT(l.id) AS total_listings
           FROM users u
-          LEFT JOIN listings l ON l.user_id = u.id
+          LEFT JOIN listings l ON l."userId" = u.id
           WHERE u.role IN ('seller', 'dealer', 'wholesaler', 'distributor')
-          GROUP BY u.id, u.name, u.is_verified
+          GROUP BY u.id, u.name, u."isVerified"
           HAVING COUNT(l.id) > 0
           ORDER BY total_listings DESC
           LIMIT 5
@@ -4687,7 +4790,7 @@ var searchRouter = router({
         id: String(r.id),
         name: r.name || "Anonymous Seller",
         totalListings: Number(r.total_listings),
-        verificationStatus: r.is_verified ? "verified" : "unverified"
+        verificationStatus: r.isVerified ? "verified" : "unverified"
       }));
     } catch (error) {
       console.error("Top sellers error:", error);
@@ -7455,6 +7558,7 @@ async function createApp(options) {
   const { mode, httpServer } = options;
   const app2 = express2();
   app2.set("trust proxy", 1);
+  app2.disable("x-powered-by");
   app2.use("/socket.io", (req, res, next) => {
   });
   app2.use(cors({
@@ -7485,7 +7589,7 @@ async function createApp(options) {
   app2.use((_req, res, next) => {
     const cspDirectives = [
       "default-src 'self'",
-      `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""} https://accounts.google.com https://*.clerk.accounts.dev https://clerk.sasto.com.np https://clerk.browser.js https://*.clerk.com`,
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://*.clerk.accounts.dev https://clerk.sasto.com.np https://clerk.browser.js https://*.clerk.com`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: https://picsum.photos https://*.picsum.photos https://images.unsplash.com https://res.cloudinary.com https://*.amazonaws.com https://*.r2.cloudflarestorage.com https://*.r2.dev https://placehold.co https://github.com https://*.githubusercontent.com https://*.googleusercontent.com https://via.placeholder.com https://img.clerk.com https://clerk.com",
       `connect-src 'self' ${isDev ? "ws: wss:" : ""} https://accounts.google.com https://*.clerk.com https://*.clerk.accounts.dev https://clerk.sasto.com.np https://clerk.browser.js`,
