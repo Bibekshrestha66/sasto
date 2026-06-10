@@ -421,26 +421,26 @@ export default function Profile() {
           {/* Right Column: Tabs */}
           <div className={`lg:col-span-8 ${!isProfessional ? "lg:col-start-3" : ""}`}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-              <TabsList className={`w-full bg-white/50 backdrop-blur-md p-1.5 rounded-[2rem] h-auto flex overflow-x-auto hide-scrollbar gap-2 shadow-xl ${!isProfessional ? 'max-w-md mx-auto justify-center' : 'justify-start sm:justify-center'}`}>
+              <TabsList className={`w-full bg-white/50 backdrop-blur-md p-1.5 rounded-[2rem] h-auto grid gap-1 md:gap-2 shadow-xl ${isProfessional ? 'grid-cols-4' : 'grid-cols-1 max-w-md mx-auto'}`}>
                 {isProfessional && (
                   <>
-                    <TabsTrigger value="listings" className="whitespace-nowrap shrink-0 rounded-2xl py-4 px-6 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white flex-1 min-w-fit">
-                      <Package className="w-4 h-4 mr-2" />
-                      Listings
+                    <TabsTrigger value="listings" className="rounded-2xl py-2 px-1 md:py-4 md:px-6 font-black text-[9px] md:text-xs uppercase tracking-normal md:tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white flex flex-col md:flex-row items-center justify-center gap-1 md:gap-0">
+                      <Package className="w-4 h-4 md:mr-2" />
+                      <span>Listings</span>
                     </TabsTrigger>
-                    <TabsTrigger value="deals" className="whitespace-nowrap shrink-0 rounded-2xl py-4 px-6 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white flex-1 min-w-fit">
-                      <Tag className="w-4 h-4 mr-2" />
-                      My Deals
+                    <TabsTrigger value="deals" className="rounded-2xl py-2 px-1 md:py-4 md:px-6 font-black text-[9px] md:text-xs uppercase tracking-normal md:tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white flex flex-col md:flex-row items-center justify-center gap-1 md:gap-0">
+                      <Tag className="w-4 h-4 md:mr-2" />
+                      <span>My Deals</span>
                     </TabsTrigger>
-                    <TabsTrigger value="reviews" className="whitespace-nowrap shrink-0 rounded-2xl py-4 px-6 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white flex-1 min-w-fit">
-                      <Star className="w-4 h-4 mr-2" />
-                      Reviews
+                    <TabsTrigger value="reviews" className="rounded-2xl py-2 px-1 md:py-4 md:px-6 font-black text-[9px] md:text-xs uppercase tracking-normal md:tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white flex flex-col md:flex-row items-center justify-center gap-1 md:gap-0">
+                      <Star className="w-4 h-4 md:mr-2" />
+                      <span>Reviews</span>
                     </TabsTrigger>
                   </>
                 )}
-                <TabsTrigger value="settings" className="whitespace-nowrap shrink-0 rounded-2xl py-4 px-6 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white flex-1 min-w-fit">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
+                <TabsTrigger value="settings" className="rounded-2xl py-2 px-1 md:py-4 md:px-6 font-black text-[9px] md:text-xs uppercase tracking-normal md:tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white flex flex-col md:flex-row items-center justify-center gap-1 md:gap-0">
+                  <Settings className="w-4 h-4 md:mr-2" />
+                  <span>Settings</span>
                 </TabsTrigger>
               </TabsList>
 
