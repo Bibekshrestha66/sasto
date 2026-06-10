@@ -258,7 +258,7 @@ export default function Profile() {
     <div className="min-h-screen bg-slate-50/50 pb-20">
       {/* Banner Section with Upload */}
       <div className="relative h-64 md:h-80 w-full overflow-hidden group/banner">
-        <div className="absolute inset-0 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500">
+        <div className="absolute inset-0 bg-gradient-to-r from-green-600 via-green-500 to-emerald-500">
           {user.bannerImage && (
             <img src={user.bannerImage} className="w-full h-full object-cover opacity-40 mix-blend-overlay" alt="Profile banner" />
           )}
@@ -421,24 +421,24 @@ export default function Profile() {
           {/* Right Column: Tabs */}
           <div className={`lg:col-span-8 ${!isProfessional ? "lg:col-start-3" : ""}`}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-              <TabsList className={`w-full bg-white/50 backdrop-blur-md p-1.5 rounded-[2rem] h-auto grid gap-2 shadow-xl ${isProfessional ? 'grid-cols-4' : 'grid-cols-1 max-w-md mx-auto'}`}>
+              <TabsList className={`w-full bg-white/50 backdrop-blur-md p-1.5 rounded-[2rem] h-auto flex overflow-x-auto hide-scrollbar gap-2 shadow-xl ${!isProfessional ? 'max-w-md mx-auto justify-center' : 'justify-start sm:justify-center'}`}>
                 {isProfessional && (
                   <>
-                    <TabsTrigger value="listings" className="rounded-2xl py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                    <TabsTrigger value="listings" className="whitespace-nowrap shrink-0 rounded-2xl py-4 px-6 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white flex-1 min-w-fit">
                       <Package className="w-4 h-4 mr-2" />
                       Listings
                     </TabsTrigger>
-                    <TabsTrigger value="deals" className="rounded-2xl py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                    <TabsTrigger value="deals" className="whitespace-nowrap shrink-0 rounded-2xl py-4 px-6 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white flex-1 min-w-fit">
                       <Tag className="w-4 h-4 mr-2" />
                       My Deals
                     </TabsTrigger>
-                    <TabsTrigger value="reviews" className="rounded-2xl py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                    <TabsTrigger value="reviews" className="whitespace-nowrap shrink-0 rounded-2xl py-4 px-6 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white flex-1 min-w-fit">
                       <Star className="w-4 h-4 mr-2" />
                       Reviews
                     </TabsTrigger>
                   </>
                 )}
-                <TabsTrigger value="settings" className="rounded-2xl py-4 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                <TabsTrigger value="settings" className="whitespace-nowrap shrink-0 rounded-2xl py-4 px-6 font-black text-xs uppercase tracking-widest data-[state=active]:bg-green-600 data-[state=active]:text-white flex-1 min-w-fit">
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
                 </TabsTrigger>
