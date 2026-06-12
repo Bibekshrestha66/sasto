@@ -55,7 +55,7 @@ export const cartRouter = router({
         where: eq(listings.id, input.listingId)
       });
 
-      if (!listing || listing.status !== "active" || (listing.stock ?? 0) <= 0) {
+      if (!listing || listing.status !== "active" || (listing.stock ?? 1) <= 0) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Listing not available or out of stock" });
       }
 
@@ -85,14 +85,14 @@ export const cartRouter = router({
       if (existingItem) {
         // Update quantity
         const newQuantity = existingItem.quantity + input.quantity;
-        if (newQuantity > listing.stock!) {
+        if (newQuantity > (listing.stock ?? 1)) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Not enough stock available" });
         }
         await db.update(cartItems)
           .set({ quantity: newQuantity, updatedAt: new Date() })
           .where(eq(cartItems.id, existingItem.id));
       } else {
-        if (input.quantity > listing.stock!) {
+        if (input.quantity > (listing.stock ?? 1)) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Not enough stock available" });
         }
         // Insert new item
@@ -125,7 +125,7 @@ export const cartRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Unauthorized" });
       }
 
-      if (input.quantity > item.listing.stock!) {
+      if (input.quantity > (item.listing.stock ?? 1)) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Not enough stock available" });
       }
 

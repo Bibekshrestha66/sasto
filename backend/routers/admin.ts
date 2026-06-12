@@ -6,6 +6,7 @@ import { getDb, updateCompanyConfig, getAllReports, resolveReport, createCareerO
 import { users, listings, disputes, adminLogs, flaggedListings, verificationSubmissions, transactions, categories, messages, logisticsPartners, companyConfigs, notifications } from "../../drizzle/schema";
 import { eq, desc, sql, gte, and, or } from "drizzle-orm";
 import { emailService } from "../_core/emailService";
+import { clerkClient } from "../_core/clerk";
 
 export const adminRouter = router({
   // User Management
@@ -337,11 +338,18 @@ export const adminRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
+      const targetUser = await db.select({ openId: users.openId }).from(users).where(eq(users.id, input.userId)).limit(1);
 
       await db
         .update(users)
         .set({ role: input.role, updatedAt: new Date() })
         .where(eq(users.id, input.userId));
+
+      if (targetUser[0]?.openId) {
+        await clerkClient.users.updateUserMetadata(targetUser[0].openId, {
+          privateMetadata: { role: input.role }
+        }).catch(console.error);
+      }
 
       await db.insert(adminLogs).values({
         adminId: ctx.user.id,
@@ -359,9 +367,19 @@ export const adminRouter = router({
     .input(z.object({ userId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
+      const targetUser = await db.select({ openId: users.openId, role: users.role }).from(users).where(eq(users.id, input.userId)).limit(1);
+      const currentRole = targetUser[0]?.role;
+      const newRole = currentRole === "user" ? "seller" : currentRole;
+
       await db.update(users)
-        .set({ isVerified: true, verificationStatus: "verified", updatedAt: new Date() })
+        .set({ isVerified: true, verificationStatus: "verified", role: newRole as any, updatedAt: new Date() })
         .where(eq(users.id, input.userId));
+
+      if (targetUser[0]?.openId && newRole !== currentRole) {
+        await clerkClient.users.updateUserMetadata(targetUser[0].openId, {
+          privateMetadata: { role: newRole }
+        }).catch(console.error);
+      }
       await db.insert(adminLogs).values({
         adminId: ctx.user.id,
         action: "user_verified",
@@ -683,9 +701,9 @@ export const adminRouter = router({
       const appUrl = process.env.VITE_APP_URL || "https://sasto-ochre.vercel.app";
 
       if (input.status === "approved") {
-        // Get the current user to check their role
-        const currentUser = await db.select({ role: users.role }).from(users).where(eq(users.id, submission[0].userId)).limit(1);
+        const currentUser = await db.select({ role: users.role, openId: users.openId }).from(users).where(eq(users.id, submission[0].userId)).limit(1);
         const currentRole = currentUser[0]?.role;
+        const newRole = currentRole === "user" ? "seller" : currentRole;
         
         await db.update(users)
           .set({
@@ -693,10 +711,16 @@ export const adminRouter = router({
             verificationLevel: submission[0].type === "kyb" ? "pro" : "basic",
             verificationStatus: "verified",
             // Automatically upgrade 'user' role to 'seller' upon verification
-            role: currentRole === "user" ? "seller" : currentRole,
+            role: newRole as any,
             updatedAt: new Date(),
           })
           .where(eq(users.id, submission[0].userId));
+
+        if (currentUser[0]?.openId && newRole !== currentRole) {
+          await clerkClient.users.updateUserMetadata(currentUser[0].openId, {
+            privateMetadata: { role: newRole }
+          }).catch(console.error);
+        }
 
         // In-app notification for approval
         await db.insert(notifications).values({

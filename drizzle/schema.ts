@@ -656,6 +656,25 @@ export const usersRelations = relations(users, ({ many }) => ({
   transactions: many(transactions, { relationName: "buyerTransactions" }),
   sales: many(transactions, { relationName: "sellerTransactions" }),
   verifications: many(verificationSubmissions),
+  reviewsWritten: many(reviews, { relationName: "writtenReviews" }),
+  reviewsReceived: many(reviews, { relationName: "receivedReviews" }),
+}));
+
+export const reviewsRelations = relations(reviews, ({ one }) => ({
+  fromUser: one(users, {
+    fields: [reviews.fromUserId],
+    references: [users.id],
+    relationName: "writtenReviews",
+  }),
+  toUser: one(users, {
+    fields: [reviews.toUserId],
+    references: [users.id],
+    relationName: "receivedReviews",
+  }),
+  listing: one(listings, {
+    fields: [reviews.listingId],
+    references: [listings.id],
+  }),
 }));
 
 export const listingsRelations = relations(listings, ({ one, many }) => ({
