@@ -34,7 +34,7 @@ import { exportSellerSalesData, exportSellerListingsData } from "@/lib/csvExport
 
 export default function SellerDashboard() {
   const [, setLocation] = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<"overview" | "listings" | "orders" | "analytics" | "reviews" | "returns">("overview");
   const [promoteModalOpen, setPromoteModalOpen] = useState(false);
   const [promoteListingItem, setPromoteListingItem] = useState<any>(null);
@@ -42,6 +42,16 @@ export default function SellerDashboard() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [dealModal, setDealModal] = useState<{ id: number; currentPrice: number; title: string } | null>(null);
   const [dealPrice, setDealPrice] = useState("");
+
+  // Wait for Clerk to finish initializing before redirecting
+  // This prevents the refresh-to-homepage bug
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   // Redirect if not authenticated
   if (!isAuthenticated) {

@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function BuyerDashboard() {
   const [, setLocation] = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<"overview" | "purchases" | "saved" | "bids" | "returns">("overview");
 
   // Fetch real data
@@ -51,6 +51,16 @@ export default function BuyerDashboard() {
     setReturnDescription("");
     setReturnModalOpen(true);
   };
+
+  // Wait for Clerk to finish initializing before redirecting
+  // This prevents the refresh-to-homepage bug
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     setLocation("/login");

@@ -299,18 +299,154 @@ export const adminRouter = router({
       };
     }),
 
-  // Listing Search for Admin
+  // Listing Search for Admin — search by title, ID, unique code, or user email
   searchListingsAdmin: adminProcedure
-    .input(z.object({ query: z.string() }))
+    .input(z.object({ 
+      query: z.string(),
+      status: z.string().optional(),
+      limit: z.number().default(50),
+    }))
     .query(async ({ input }) => {
       const db = await getDb();
-      const allListings = await db.select().from(listings);
+      const q = input.query.toLowerCase().trim();
       
-      const q = input.query.toLowerCase();
-      return allListings.filter(l => 
-        l.id.toString() === q || 
-        (l.title && l.title.toLowerCase().includes(q))
-      ).slice(0, 50); // limit to 50 results
+      // Get all users for email/name matching
+      const allUsers = await db.select({ id: users.id, name: users.name, email: users.email }).from(users);
+      const matchingUserIds = allUsers
+        .filter(u => u.email?.toLowerCase().includes(q) || u.name?.toLowerCase().includes(q))
+        .map(u => u.id);
+      
+      const allListings = await db
+        .select({
+          id: listings.id,
+          title: listings.title,
+          description: listings.description,
+          price: listings.price,
+          status: listings.status,
+          type: listings.type,
+          images: listings.images,
+          location: listings.location,
+          condition: listings.condition,
+          stock: listings.stock,
+          categoryId: listings.categoryId,
+          userId: listings.userId,
+          isFeatured: listings.isFeatured,
+          createdAt: listings.createdAt,
+          brand: listings.brand,
+          model: listings.model,
+        })
+        .from(listings)
+        .orderBy(desc(listings.createdAt));
+      
+      let filtered = allListings.filter(l => {
+        const idMatch = l.id.toString() === q;
+        const titleMatch = l.title?.toLowerCase().includes(q);
+        const userMatch = matchingUserIds.includes(l.userId);
+        return idMatch || titleMatch || userMatch;
+      });
+      
+      if (input.status && input.status !== 'all') {
+        filtered = filtered.filter(l => l.status === input.status);
+      }
+      
+      // Attach seller info
+      const userMap = Object.fromEntries(allUsers.map(u => [u.id, u]));
+      return filtered.slice(0, input.limit).map(l => ({
+        ...l,
+        sellerName: userMap[l.userId]?.name || 'Unknown',
+        sellerEmail: userMap[l.userId]?.email || '',
+      }));
+    }),
+
+  // Admin edit any listing
+  adminEditListing: adminProcedure
+    .input(z.object({
+      listingId: z.number(),
+      title: z.string().optional(),
+      description: z.string().optional(),
+      price: z.number().optional(),
+      status: z.string().optional(),
+      stock: z.number().optional(),
+      condition: z.string().optional(),
+      location: z.string().optional(),
+      brand: z.string().optional(),
+      model: z.string().optional(),
+      isFeatured: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      const { listingId, ...updateFields } = input;
+      const updateData: Record<string, any> = { updatedAt: new Date() };
+      if (updateFields.title !== undefined) updateData.title = updateFields.title;
+      if (updateFields.description !== undefined) updateData.description = updateFields.description;
+      if (updateFields.price !== undefined) updateData.price = updateFields.price;
+      if (updateFields.status !== undefined) updateData.status = updateFields.status;
+      if (updateFields.stock !== undefined) updateData.stock = updateFields.stock;
+      if (updateFields.condition !== undefined) updateData.condition = updateFields.condition;
+      if (updateFields.location !== undefined) updateData.location = updateFields.location;
+      if (updateFields.brand !== undefined) updateData.brand = updateFields.brand;
+      if (updateFields.model !== undefined) updateData.model = updateFields.model;
+      if (updateFields.isFeatured !== undefined) updateData.isFeatured = updateFields.isFeatured;
+
+      await db.update(listings).set(updateData).where(eq(listings.id, listingId));
+
+      await db.insert(adminLogs).values({
+        adminId: ctx.user.id,
+        action: 'admin_edit_listing',
+        targetListingId: listingId,
+        details: `Admin edited listing fields: ${Object.keys(updateFields).join(', ')}`,
+        timestamp: new Date(),
+      });
+
+      return { success: true };
+    }),
+
+  // Admin create a listing on behalf of any user
+  adminCreateListingForUser: adminProcedure
+    .input(z.object({
+      userId: z.number(),
+      categoryId: z.number(),
+      title: z.string(),
+      description: z.string().optional(),
+      type: z.string().default('marketplace'),
+      price: z.number().optional(),
+      location: z.string().optional(),
+      condition: z.string().optional(),
+      stock: z.number().default(1),
+      brand: z.string().optional(),
+      model: z.string().optional(),
+      status: z.string().default('active'),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+
+      const result = await db.insert(listings).values({
+        userId: input.userId,
+        categoryId: input.categoryId,
+        title: input.title,
+        description: input.description,
+        type: input.type,
+        price: input.price,
+        location: input.location,
+        condition: input.condition,
+        stock: input.stock,
+        brand: input.brand,
+        model: input.model,
+        status: input.status,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
+
+      await db.insert(adminLogs).values({
+        adminId: ctx.user.id,
+        action: 'admin_create_listing_for_user',
+        targetUserId: input.userId,
+        targetListingId: result[0]?.id,
+        details: `Admin created listing "${input.title}" for user ID ${input.userId}`,
+        timestamp: new Date(),
+      });
+
+      return { success: true, listing: result[0] };
     }),
 
   // Admin Logs
