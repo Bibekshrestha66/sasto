@@ -116,6 +116,7 @@ __export(schema_exports, {
   reviewAnalytics: () => reviewAnalytics,
   reviewHelpfulVotes: () => reviewHelpfulVotes,
   reviews: () => reviews,
+  reviewsRelations: () => reviewsRelations,
   roleAuditLogs: () => roleAuditLogs,
   rolePermissions: () => rolePermissions,
   roles: () => roles,
@@ -129,7 +130,7 @@ __export(schema_exports, {
 });
 import { pgTable, text, integer, real, boolean, timestamp, jsonb, serial } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-var users, categories, listings, auctions, bids, bookings, favorites, messages, reviews, notifications, disputes, adminLogs, roles, permissions, rolePermissions, userRoles, roleAuditLogs, advertisers, manualAds, adAnalytics, adsensePlacements, adPayments, sponsoredAdPricing, promotionRequests, emailNotificationPreferences, emailQueue, emailLogs, reviewHelpfulVotes, reviewAnalytics, flaggedReviews, flaggedListings, verificationSubmissions, transactions, carts, cartItems, logisticsPartners, usersRelations, listingsRelations, transactionsRelations, cartsRelations, cartItemsRelations, categoriesRelations, companyConfigs, paymentGateways, reports, careers, returns, returnsRelations;
+var users, categories, listings, auctions, bids, bookings, favorites, messages, reviews, notifications, disputes, adminLogs, roles, permissions, rolePermissions, userRoles, roleAuditLogs, advertisers, manualAds, adAnalytics, adsensePlacements, adPayments, sponsoredAdPricing, promotionRequests, emailNotificationPreferences, emailQueue, emailLogs, reviewHelpfulVotes, reviewAnalytics, flaggedReviews, flaggedListings, verificationSubmissions, transactions, carts, cartItems, logisticsPartners, usersRelations, reviewsRelations, listingsRelations, transactionsRelations, cartsRelations, cartItemsRelations, categoriesRelations, companyConfigs, paymentGateways, reports, careers, returns, returnsRelations;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
@@ -631,7 +632,25 @@ var init_schema = __esm({
       listings: many(listings),
       transactions: many(transactions, { relationName: "buyerTransactions" }),
       sales: many(transactions, { relationName: "sellerTransactions" }),
-      verifications: many(verificationSubmissions)
+      verifications: many(verificationSubmissions),
+      reviewsWritten: many(reviews, { relationName: "writtenReviews" }),
+      reviewsReceived: many(reviews, { relationName: "receivedReviews" })
+    }));
+    reviewsRelations = relations(reviews, ({ one }) => ({
+      fromUser: one(users, {
+        fields: [reviews.fromUserId],
+        references: [users.id],
+        relationName: "writtenReviews"
+      }),
+      toUser: one(users, {
+        fields: [reviews.toUserId],
+        references: [users.id],
+        relationName: "receivedReviews"
+      }),
+      listing: one(listings, {
+        fields: [reviews.listingId],
+        references: [listings.id]
+      })
     }));
     listingsRelations = relations(listings, ({ one, many }) => ({
       user: one(users, {
@@ -2870,6 +2889,89 @@ init_db();
 init_schema();
 import { TRPCError as TRPCError4 } from "@trpc/server";
 import { eq as eq5, desc as desc3, sql as sql2, gte as gte3, and as and3, or as or2 } from "drizzle-orm";
+
+// backend/_core/clerk.ts
+init_db();
+import { createClerkClient, verifyToken } from "@clerk/backend";
+var secretKey = process.env.CLERK_SECRET_KEY || "";
+if (!secretKey && process.env.NODE_ENV === "production") {
+  console.warn("CLERK_SECRET_KEY is not configured! Authentication will fail.");
+}
+var clerkClient = createClerkClient({ secretKey });
+async function authenticateClerkUser(token) {
+  try {
+    console.log("[Clerk Auth] Verifying incoming Clerk token...");
+    const claims = await verifyToken(token, { secretKey });
+    const clerkId = claims.sub;
+    if (!clerkId) {
+      throw new Error("Clerk token missing subject claim (sub)");
+    }
+    console.log(`[Clerk Auth] Token verified successfully. subject (clerkId): ${clerkId}`);
+    let user = await getUserByOpenId(clerkId);
+    console.log(`[Clerk Auth] Local user lookup: ${user ? "Found (" + user.email + ")" : "Not Found"}`);
+    if (!user) {
+      console.log(`[Clerk Auth] Syncing new user profile for clerkId: ${clerkId}`);
+      const clerkUser = await clerkClient.users.getUser(clerkId);
+      const email = clerkUser.emailAddresses[0]?.emailAddress || null;
+      const name = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || email?.split("@")[0] || "User";
+      const avatar = clerkUser.imageUrl || null;
+      let role = clerkUser.privateMetadata?.role || "user";
+      if (email === "bibekshrestha66@gmail.com" || email === process.env.OWNER_OPEN_ID) {
+        role = "super_admin";
+      }
+      await upsertUser({
+        openId: clerkId,
+        name,
+        email,
+        avatar,
+        role,
+        loginMethod: "clerk",
+        isVerified: role !== "user",
+        // verify automatically if role has changed
+        lastSignedIn: /* @__PURE__ */ new Date()
+      });
+      user = await getUserByOpenId(clerkId);
+    } else {
+      const clerkUser = await clerkClient.users.getUser(clerkId);
+      let clerkRole = clerkUser.privateMetadata?.role;
+      let newRole = clerkRole || "user";
+      if (user.email === "bibekshrestha66@gmail.com" || user.email === process.env.OWNER_OPEN_ID) {
+        newRole = "super_admin";
+      }
+      if ((!clerkRole || clerkRole === "user") && user.role && user.role !== "user" && newRole !== "super_admin") {
+        newRole = user.role;
+        clerkClient.users.updateUserMetadata(clerkId, {
+          privateMetadata: { role: newRole }
+        }).catch(console.error);
+      }
+      if (user.role !== newRole || user.name !== `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim()) {
+        console.log(`[Clerk Auth] Updating role/metadata locally to: ${newRole} for ${clerkId}`);
+        await upsertUser({
+          openId: clerkId,
+          role: newRole,
+          name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim(),
+          avatar: clerkUser.imageUrl,
+          lastSignedIn: /* @__PURE__ */ new Date()
+        });
+        user = await getUserByOpenId(clerkId);
+      } else {
+        await upsertUser({
+          openId: clerkId,
+          lastSignedIn: /* @__PURE__ */ new Date()
+        });
+      }
+    }
+    if (!user) {
+      throw new Error("Failed to resolve user locally after Clerk sync");
+    }
+    return user;
+  } catch (error) {
+    console.error("[Clerk Auth] Failed to authenticate user:", error);
+    throw error;
+  }
+}
+
+// backend/routers/admin.ts
 var adminRouter = router({
   // User Management
   getAllUsers: adminProcedure.input(
@@ -3099,14 +3201,128 @@ var adminRouter = router({
       suspiciousUserIds
     };
   }),
-  // Listing Search for Admin
-  searchListingsAdmin: adminProcedure.input(z3.object({ query: z3.string() })).query(async ({ input }) => {
+  // Listing Search for Admin — search by title, ID, unique code, or user email
+  searchListingsAdmin: adminProcedure.input(z3.object({
+    query: z3.string(),
+    status: z3.string().optional(),
+    limit: z3.number().default(50)
+  })).query(async ({ input }) => {
     const db3 = await getDb();
-    const allListings = await db3.select().from(listings);
-    const q = input.query.toLowerCase();
-    return allListings.filter(
-      (l) => l.id.toString() === q || l.title && l.title.toLowerCase().includes(q)
-    ).slice(0, 50);
+    const q = input.query.toLowerCase().trim();
+    const allUsers = await db3.select({ id: users.id, name: users.name, email: users.email }).from(users);
+    const matchingUserIds = allUsers.filter((u) => u.email?.toLowerCase().includes(q) || u.name?.toLowerCase().includes(q)).map((u) => u.id);
+    const allListings = await db3.select({
+      id: listings.id,
+      title: listings.title,
+      description: listings.description,
+      price: listings.price,
+      status: listings.status,
+      type: listings.type,
+      images: listings.images,
+      location: listings.location,
+      condition: listings.condition,
+      stock: listings.stock,
+      categoryId: listings.categoryId,
+      userId: listings.userId,
+      isFeatured: listings.isFeatured,
+      createdAt: listings.createdAt,
+      brand: listings.brand,
+      model: listings.model
+    }).from(listings).orderBy(desc3(listings.createdAt));
+    let filtered = allListings.filter((l) => {
+      const idMatch = l.id.toString() === q;
+      const titleMatch = l.title?.toLowerCase().includes(q);
+      const userMatch = matchingUserIds.includes(l.userId);
+      return idMatch || titleMatch || userMatch;
+    });
+    if (input.status && input.status !== "all") {
+      filtered = filtered.filter((l) => l.status === input.status);
+    }
+    const userMap = Object.fromEntries(allUsers.map((u) => [u.id, u]));
+    return filtered.slice(0, input.limit).map((l) => ({
+      ...l,
+      sellerName: userMap[l.userId]?.name || "Unknown",
+      sellerEmail: userMap[l.userId]?.email || ""
+    }));
+  }),
+  // Admin edit any listing
+  adminEditListing: adminProcedure.input(z3.object({
+    listingId: z3.number(),
+    title: z3.string().optional(),
+    description: z3.string().optional(),
+    price: z3.number().optional(),
+    status: z3.string().optional(),
+    stock: z3.number().optional(),
+    condition: z3.string().optional(),
+    location: z3.string().optional(),
+    brand: z3.string().optional(),
+    model: z3.string().optional(),
+    isFeatured: z3.boolean().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db3 = await getDb();
+    const { listingId, ...updateFields } = input;
+    const updateData = { updatedAt: /* @__PURE__ */ new Date() };
+    if (updateFields.title !== void 0) updateData.title = updateFields.title;
+    if (updateFields.description !== void 0) updateData.description = updateFields.description;
+    if (updateFields.price !== void 0) updateData.price = updateFields.price;
+    if (updateFields.status !== void 0) updateData.status = updateFields.status;
+    if (updateFields.stock !== void 0) updateData.stock = updateFields.stock;
+    if (updateFields.condition !== void 0) updateData.condition = updateFields.condition;
+    if (updateFields.location !== void 0) updateData.location = updateFields.location;
+    if (updateFields.brand !== void 0) updateData.brand = updateFields.brand;
+    if (updateFields.model !== void 0) updateData.model = updateFields.model;
+    if (updateFields.isFeatured !== void 0) updateData.isFeatured = updateFields.isFeatured;
+    await db3.update(listings).set(updateData).where(eq5(listings.id, listingId));
+    await db3.insert(adminLogs).values({
+      adminId: ctx.user.id,
+      action: "admin_edit_listing",
+      targetListingId: listingId,
+      details: `Admin edited listing fields: ${Object.keys(updateFields).join(", ")}`,
+      timestamp: /* @__PURE__ */ new Date()
+    });
+    return { success: true };
+  }),
+  // Admin create a listing on behalf of any user
+  adminCreateListingForUser: adminProcedure.input(z3.object({
+    userId: z3.number(),
+    categoryId: z3.number(),
+    title: z3.string(),
+    description: z3.string().optional(),
+    type: z3.string().default("marketplace"),
+    price: z3.number().optional(),
+    location: z3.string().optional(),
+    condition: z3.string().optional(),
+    stock: z3.number().default(1),
+    brand: z3.string().optional(),
+    model: z3.string().optional(),
+    status: z3.string().default("active")
+  })).mutation(async ({ input, ctx }) => {
+    const db3 = await getDb();
+    const result = await db3.insert(listings).values({
+      userId: input.userId,
+      categoryId: input.categoryId,
+      title: input.title,
+      description: input.description,
+      type: input.type,
+      price: input.price,
+      location: input.location,
+      condition: input.condition,
+      stock: input.stock,
+      brand: input.brand,
+      model: input.model,
+      status: input.status,
+      createdAt: /* @__PURE__ */ new Date(),
+      updatedAt: /* @__PURE__ */ new Date()
+    }).returning();
+    await db3.insert(adminLogs).values({
+      adminId: ctx.user.id,
+      action: "admin_create_listing_for_user",
+      targetUserId: input.userId,
+      targetListingId: result[0]?.id,
+      details: `Admin created listing "${input.title}" for user ID ${input.userId}`,
+      timestamp: /* @__PURE__ */ new Date()
+    });
+    return { success: true, listing: result[0] };
   }),
   // Admin Logs
   getAdminLogs: adminProcedure.input(z3.object({ page: z3.number().default(1), limit: z3.number().default(20) })).query(async ({ input }) => {
@@ -3121,7 +3337,13 @@ var adminRouter = router({
     role: z3.enum(["user", "seller", "csr", "sub_moderator", "moderator", "admin", "super_admin"])
   })).mutation(async ({ input, ctx }) => {
     const db3 = await getDb();
+    const targetUser = await db3.select({ openId: users.openId }).from(users).where(eq5(users.id, input.userId)).limit(1);
     await db3.update(users).set({ role: input.role, updatedAt: /* @__PURE__ */ new Date() }).where(eq5(users.id, input.userId));
+    if (targetUser[0]?.openId) {
+      await clerkClient.users.updateUserMetadata(targetUser[0].openId, {
+        privateMetadata: { role: input.role }
+      }).catch(console.error);
+    }
     await db3.insert(adminLogs).values({
       adminId: ctx.user.id,
       action: "user_role_updated",
@@ -3134,12 +3356,42 @@ var adminRouter = router({
   // Verify user
   verifyUser: adminProcedure.input(z3.object({ userId: z3.number() })).mutation(async ({ input, ctx }) => {
     const db3 = await getDb();
-    await db3.update(users).set({ isVerified: true, verificationStatus: "verified", updatedAt: /* @__PURE__ */ new Date() }).where(eq5(users.id, input.userId));
+    const targetUser = await db3.select({ openId: users.openId, role: users.role }).from(users).where(eq5(users.id, input.userId)).limit(1);
+    const currentRole = targetUser[0]?.role;
+    const newRole = currentRole === "user" ? "seller" : currentRole;
+    await db3.update(users).set({ isVerified: true, verificationStatus: "verified", role: newRole, updatedAt: /* @__PURE__ */ new Date() }).where(eq5(users.id, input.userId));
+    if (targetUser[0]?.openId && newRole !== currentRole) {
+      await clerkClient.users.updateUserMetadata(targetUser[0].openId, {
+        privateMetadata: { role: newRole }
+      }).catch(console.error);
+    }
     await db3.insert(adminLogs).values({
       adminId: ctx.user.id,
       action: "user_verified",
       targetUserId: input.userId,
       details: "User verified manually by admin",
+      timestamp: /* @__PURE__ */ new Date()
+    });
+    return { success: true };
+  }),
+  // Update user role
+  updateUserRole: adminProcedure.input(z3.object({ userId: z3.number(), role: z3.string() })).mutation(async ({ input, ctx }) => {
+    if (ctx.user.role !== "super_admin") {
+      throw new TRPCError4({ code: "FORBIDDEN", message: "Only super_admin can change roles directly" });
+    }
+    const db3 = await getDb();
+    const targetUser = await db3.select({ openId: users.openId }).from(users).where(eq5(users.id, input.userId)).limit(1);
+    await db3.update(users).set({ role: input.role, updatedAt: /* @__PURE__ */ new Date() }).where(eq5(users.id, input.userId));
+    if (targetUser[0]?.openId) {
+      await clerkClient.users.updateUserMetadata(targetUser[0].openId, {
+        privateMetadata: { role: input.role }
+      }).catch(console.error);
+    }
+    await db3.insert(adminLogs).values({
+      adminId: ctx.user.id,
+      action: "user_role_updated",
+      targetUserId: input.userId,
+      details: `Role updated to ${input.role} by super_admin`,
       timestamp: /* @__PURE__ */ new Date()
     });
     return { success: true };
@@ -3339,16 +3591,22 @@ var adminRouter = router({
     const verificationType = submission[0].type === "kyb" ? "KYB (Business)" : "KYC (Individual)";
     const appUrl = process.env.VITE_APP_URL || "https://sasto-ochre.vercel.app";
     if (input.status === "approved") {
-      const currentUser = await db3.select({ role: users.role }).from(users).where(eq5(users.id, submission[0].userId)).limit(1);
+      const currentUser = await db3.select({ role: users.role, openId: users.openId }).from(users).where(eq5(users.id, submission[0].userId)).limit(1);
       const currentRole = currentUser[0]?.role;
+      const newRole = currentRole === "user" ? "seller" : currentRole;
       await db3.update(users).set({
         isVerified: true,
         verificationLevel: submission[0].type === "kyb" ? "pro" : "basic",
         verificationStatus: "verified",
         // Automatically upgrade 'user' role to 'seller' upon verification
-        role: currentRole === "user" ? "seller" : currentRole,
+        role: newRole,
         updatedAt: /* @__PURE__ */ new Date()
       }).where(eq5(users.id, submission[0].userId));
+      if (currentUser[0]?.openId && newRole !== currentRole) {
+        await clerkClient.users.updateUserMetadata(currentUser[0].openId, {
+          privateMetadata: { role: newRole }
+        }).catch(console.error);
+      }
       await db3.insert(notifications).values({
         userId: submission[0].userId,
         type: "verification_approved",
@@ -5269,7 +5527,7 @@ var cartRouter = router({
     const listing = await db3.query.listings.findFirst({
       where: eq12(listings.id, input.listingId)
     });
-    if (!listing || listing.status !== "active" || (listing.stock ?? 0) <= 0) {
+    if (!listing || listing.status !== "active" || (listing.stock ?? 1) <= 0) {
       throw new TRPCError9({ code: "NOT_FOUND", message: "Listing not available or out of stock" });
     }
     if (listing.userId === ctx.user.id) {
@@ -5290,12 +5548,12 @@ var cartRouter = router({
     });
     if (existingItem) {
       const newQuantity = existingItem.quantity + input.quantity;
-      if (newQuantity > listing.stock) {
+      if (newQuantity > (listing.stock ?? 1)) {
         throw new TRPCError9({ code: "BAD_REQUEST", message: "Not enough stock available" });
       }
       await db3.update(cartItems).set({ quantity: newQuantity, updatedAt: /* @__PURE__ */ new Date() }).where(eq12(cartItems.id, existingItem.id));
     } else {
-      if (input.quantity > listing.stock) {
+      if (input.quantity > (listing.stock ?? 1)) {
         throw new TRPCError9({ code: "BAD_REQUEST", message: "Not enough stock available" });
       }
       await db3.insert(cartItems).values({
@@ -5320,7 +5578,7 @@ var cartRouter = router({
     if (!item || item.cart.userId !== ctx.user.id) {
       throw new TRPCError9({ code: "FORBIDDEN", message: "Unauthorized" });
     }
-    if (input.quantity > item.listing.stock) {
+    if (input.quantity > (item.listing.stock ?? 1)) {
       throw new TRPCError9({ code: "BAD_REQUEST", message: "Not enough stock available" });
     }
     await db3.update(cartItems).set({ quantity: input.quantity, updatedAt: /* @__PURE__ */ new Date() }).where(eq12(cartItems.id, input.itemId));
@@ -6256,75 +6514,6 @@ var appRouter = router({
   // Deals & Offers - ADD THIS SECTION
   deals: dealsRouter
 });
-
-// backend/_core/clerk.ts
-init_db();
-import { createClerkClient, verifyToken } from "@clerk/backend";
-var secretKey = process.env.CLERK_SECRET_KEY || "";
-if (!secretKey && process.env.NODE_ENV === "production") {
-  console.warn("CLERK_SECRET_KEY is not configured! Authentication will fail.");
-}
-var clerkClient = createClerkClient({ secretKey });
-async function authenticateClerkUser(token) {
-  try {
-    console.log("[Clerk Auth] Verifying incoming Clerk token...");
-    const claims = await verifyToken(token, { secretKey });
-    const clerkId = claims.sub;
-    if (!clerkId) {
-      throw new Error("Clerk token missing subject claim (sub)");
-    }
-    console.log(`[Clerk Auth] Token verified successfully. subject (clerkId): ${clerkId}`);
-    let user = await getUserByOpenId(clerkId);
-    console.log(`[Clerk Auth] Local user lookup: ${user ? "Found (" + user.email + ")" : "Not Found"}`);
-    if (!user) {
-      console.log(`[Clerk Auth] Syncing new user profile for clerkId: ${clerkId}`);
-      const clerkUser = await clerkClient.users.getUser(clerkId);
-      const email = clerkUser.emailAddresses[0]?.emailAddress || null;
-      const name = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || email?.split("@")[0] || "User";
-      const avatar = clerkUser.imageUrl || null;
-      let role = clerkUser.privateMetadata?.role || "user";
-      if (email === "bibekshrestha66@gmail.com" || email === process.env.OWNER_OPEN_ID) {
-        role = "super_admin";
-      }
-      await upsertUser({
-        openId: clerkId,
-        name,
-        email,
-        avatar,
-        role,
-        loginMethod: "clerk",
-        isVerified: role !== "user",
-        // verify automatically if role has changed
-        lastSignedIn: /* @__PURE__ */ new Date()
-      });
-      user = await getUserByOpenId(clerkId);
-    } else {
-      const clerkUser = await clerkClient.users.getUser(clerkId);
-      let newRole = clerkUser.privateMetadata?.role || "user";
-      if (user.email === "bibekshrestha66@gmail.com" || user.email === process.env.OWNER_OPEN_ID) {
-        newRole = "super_admin";
-      }
-      if (user.role !== newRole || user.name !== `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim()) {
-        console.log(`[Clerk Auth] Updating role/metadata locally to: ${newRole} for ${clerkId}`);
-        await upsertUser({
-          openId: clerkId,
-          role: newRole,
-          name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim(),
-          avatar: clerkUser.imageUrl,
-          lastSignedIn: /* @__PURE__ */ new Date()
-        });
-        user = await getUserByOpenId(clerkId);
-      }
-    }
-    if (!user) {
-      throw new Error("Failed to resolve user locally after Clerk sync");
-    }
-    return user;
-  } catch (error) {
-    console.error("[Clerk Auth] Failed to authenticate user:", error);
-    throw error;
-  }
-}
 
 // shared/_core/errors.ts
 var HttpError = class extends Error {

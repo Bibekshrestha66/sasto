@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../_core/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { trpc } from "@/lib/trpc";
+import { AdminManageAds } from "@/components/AdminManageAds";
 import { toast } from "sonner";
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
@@ -68,12 +69,7 @@ export default function SuperAdminDashboard() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Search Ads State
-  const [listingSearchQuery, setListingSearchQuery] = useState("");
-  const { data: searchResults, isLoading: searchLoading } = trpc.admin.searchListingsAdmin.useQuery(
-    { query: listingSearchQuery },
-    { enabled: listingSearchQuery.length > 0 && selectedTab === "search_ads" }
-  );
+  // Search Ads State (Migrated to AdminManageAds component)
 
   // Sponsored ads state
   const [promotionStatusFilter, setPromotionStatusFilter] = useState("");
@@ -712,68 +708,17 @@ export default function SuperAdminDashboard() {
               <TabsTrigger value="logistics">log</TabsTrigger>
               <TabsTrigger value="rbac">rbac</TabsTrigger>
             </TabsList>
-          {/* SEARCH ADS */}
+          {/* MANAGE ADS */}
           <TabsContent value="search_ads" className="space-y-6">
-            <Card className="border-none shadow-md">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-black">Search Listings</CardTitle>
-                <CardDescription>Search ads by their exact ID or by title</CardDescription>
-                <div className="relative mt-2 max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input 
-                    placeholder="Enter Listing ID or Title..." 
-                    className="pl-9 h-10"
-                    value={listingSearchQuery}
-                    onChange={(e) => setListingSearchQuery(e.target.value)}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                {searchLoading ? (
-                  <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto" /></div>
-                ) : searchResults && searchResults.length > 0 ? (
-                  <div className="divide-y divide-gray-100">
-                    {searchResults.map((listing) => (
-                      <div key={listing.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-start gap-4">
-                          <div className="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200">
-                            {listing.images && listing.images[0] ? (
-                              <img src={listing.images[0]} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center"><Package className="w-6 h-6 text-gray-400" /></div>
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-bold text-gray-900 text-sm">#{listing.id} - {listing.title}</p>
-                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{listing.description}</p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <Badge variant="outline" className="text-[10px]">{listing.type}</Badge>
-                              <Badge variant={listing.status === "active" ? "default" : "secondary"} className="text-[10px] capitalize bg-green-100 text-green-700 hover:bg-green-100 border-none">{listing.status}</Badge>
-                              {listing.price && <span className="text-xs font-bold text-gray-700">Rs. {Number(listing.price).toLocaleString()}</span>}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="shrink-0 flex items-center gap-2">
-                          <a href={`/listing/${listing.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center rounded-md text-xs font-medium border h-8 px-3 hover:bg-gray-50 transition-colors">
-                            <Eye className="w-3.5 h-3.5 mr-1" /> View Ad
-                          </a>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : listingSearchQuery.length > 0 ? (
-                  <div className="py-12 text-center text-gray-400">
-                    <Search className="w-8 h-8 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm">No listings found for "{listingSearchQuery}"</p>
-                  </div>
-                ) : (
-                  <div className="py-12 text-center text-gray-400">
-                    <Package className="w-8 h-8 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm">Type an ID or title to begin searching</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                  <Search className="w-6 h-6 text-cyan-600" /> Manage Ads
+                </h2>
+                <p className="text-gray-500 text-sm mt-1">Search, edit, and create listings across the platform.</p>
+              </div>
+            </div>
+            <AdminManageAds />
           </TabsContent>
 
           {/* OVERVIEW */}
@@ -849,7 +794,7 @@ export default function SuperAdminDashboard() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-3xl font-black text-gray-900">{advancedAnalytics?.summary?.newUsers ?? 0}</p>
+                    <p className="text-3xl font-black text-gray-900">{advancedAnalytics?.summary?.periodNewUsers ?? 0}</p>
                     <p className="text-xs font-medium text-gray-500 mt-1">in selected period</p>
                   </div>
                 </CardContent>
@@ -867,7 +812,7 @@ export default function SuperAdminDashboard() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-3xl font-black text-gray-900">{advancedAnalytics?.summary?.newListings ?? 0}</p>
+                    <p className="text-3xl font-black text-gray-900">{advancedAnalytics?.summary?.periodNewListings ?? 0}</p>
                     <p className="text-xs font-medium text-gray-500 mt-1">in selected period</p>
                   </div>
                 </CardContent>
@@ -906,7 +851,7 @@ export default function SuperAdminDashboard() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-3xl font-black text-gray-900">{advancedAnalytics?.summary?.completedOrders ?? 0}</p>
+                    <p className="text-3xl font-black text-gray-900">{advancedAnalytics?.summary?.periodTransactions ?? 0}</p>
                     <p className="text-xs font-medium text-gray-500 mt-1">in selected period</p>
                   </div>
                 </CardContent>

@@ -526,36 +526,6 @@ export const adminRouter = router({
       return { success: true };
     }),
 
-  // Update user role
-  updateUserRole: adminProcedure
-    .input(z.object({ userId: z.number(), role: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      if (ctx.user.role !== "super_admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only super_admin can change roles directly" });
-      }
-
-      const db = await getDb();
-      const targetUser = await db.select({ openId: users.openId }).from(users).where(eq(users.id, input.userId)).limit(1);
-      
-      await db.update(users)
-        .set({ role: input.role as any, updatedAt: new Date() })
-        .where(eq(users.id, input.userId));
-
-      if (targetUser[0]?.openId) {
-        await clerkClient.users.updateUserMetadata(targetUser[0].openId, {
-          privateMetadata: { role: input.role }
-        }).catch(console.error);
-      }
-
-      await db.insert(adminLogs).values({
-        adminId: ctx.user.id,
-        action: "user_role_updated",
-        targetUserId: input.userId,
-        details: `Role updated to ${input.role} by super_admin`,
-        timestamp: new Date(),
-      });
-      return { success: true };
-    }),
 
   // Suspend user
   suspendUser: adminProcedure
