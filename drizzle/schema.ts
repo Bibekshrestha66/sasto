@@ -831,3 +831,26 @@ export const returnsRelations = relations(returns, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export const auctionsRelations = relations(auctions, ({ one, many }) => ({
+  listing: one(listings, {
+    fields: [auctions.listingId],
+    references: [listings.id],
+  }),
+  highestBidder: one(users, {
+    fields: [auctions.highestBidderId],
+    references: [users.id],
+  }),
+  bids: many(bids),
+}));
+
+export const bidsRelations = relations(bids, ({ one }) => ({
+  auction: one(auctions, {
+    fields: [bids.auctionId],
+    references: [auctions.id],
+  }),
+  bidder: one(users, {
+    fields: [bids.bidderId],
+    references: [users.id],
+  }),
+}));
