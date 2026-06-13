@@ -42,6 +42,41 @@ export default function SellerDashboard() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [dealModal, setDealModal] = useState<{ id: number; currentPrice: number; title: string } | null>(null);
   const [dealPrice, setDealPrice] = useState("");
+  const [listingSearch, setListingSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+
+  // ── ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS (Rules of Hooks) ──
+  const professionalRoles = ["seller", "dealer", "wholesaler", "distributor", "admin", "super_admin"];
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const isProfessional = professionalRoles.includes(user?.role || "");
+  const canAccess = isAuthenticated && (isProfessional) && (user?.isVerified || isAdmin);
+
+  // Fetch dashboard data — always call hooks, use enabled flag to skip when not ready
+  const { data: metrics, isLoading: metricsLoading } = trpc.sellerAnalytics.overview.useQuery(undefined, { enabled: canAccess });
+  const { data: listings, isLoading: listingsLoading } = trpc.seller.getListings.useQuery({ page: 1, limit: 10 }, { enabled: canAccess });
+  const { data: analytics } = trpc.sellerAnalytics.salesTrends.useQuery({ days: 30 }, { enabled: canAccess });
+  const { data: reviews } = trpc.sellerAnalytics.reviews.useQuery({ page: 1, limit: 5 }, { enabled: canAccess });
+  const { data: topListings } = trpc.sellerAnalytics.topListings.useQuery({ limit: 5 }, { enabled: canAccess });
+  const { data: revenueByCategory } = trpc.sellerAnalytics.revenueByCategory.useQuery(undefined, { enabled: canAccess });
+  const { data: auctionStats } = trpc.sellerAnalytics.auctionStats.useQuery(undefined, { enabled: canAccess });
+  const { data: orders = [], isLoading: ordersLoading } = trpc.transactions.listSellerOrders.useQuery(undefined, { enabled: canAccess });
+  const { data: returnsData = [], refetch: refetchReturns } = (trpc as any).returns.getSellerReturns.useQuery(undefined, { enabled: canAccess });
+
+  const utils = trpc.useUtils();
+  const deleteListingMutation = trpc.seller.deleteListing.useMutation();
+
+  const { data: pricingTiers = [], isLoading: pricingLoading } = trpc.ads.getSponsoredPricing.useQuery(undefined, { enabled: canAccess });
+  const { data: gateways = [], isLoading: gatewaysLoading } = trpc.ads.getActiveGateways.useQuery(undefined, { enabled: canAccess });
+
+  const promoteListingMutation = trpc.ads.promoteListing.useMutation();
+  const createDealMutation = trpc.seller.updateListingPrice.useMutation();
+  const updateStatusMutation = trpc.transactions.updateStatus.useMutation();
+  const updateReturnStatusMutation = (trpc as any).returns.updateStatus.useMutation();
+
+  const COLORS = ["#00AA44", "#FFA500", "#FF6B6B", "#4ECDC4"];
+
+  // ── EARLY RETURNS AFTER ALL HOOKS ──
 
   // Wait for Clerk to finish initializing before redirecting
   // This prevents the refresh-to-homepage bug
@@ -60,10 +95,6 @@ export default function SellerDashboard() {
   }
 
   // Only verified professional accounts can access seller dashboard
-  const professionalRoles = ["seller", "dealer", "wholesaler", "distributor", "admin", "super_admin"];
-  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
-  const isProfessional = professionalRoles.includes(user?.role || "");
-
   if (!isProfessional) {
     setLocation("/become-seller");
     return null;
@@ -74,32 +105,7 @@ export default function SellerDashboard() {
     return null;
   }
 
-  // Fetch dashboard data
-  const { data: metrics, isLoading: metricsLoading } = trpc.sellerAnalytics.overview.useQuery(undefined);
-  const { data: listings, isLoading: listingsLoading } = trpc.seller.getListings.useQuery({ page: 1, limit: 10 });
-  const { data: analytics } = trpc.sellerAnalytics.salesTrends.useQuery({ days: 30 });
-  const { data: reviews } = trpc.sellerAnalytics.reviews.useQuery({ page: 1, limit: 5 });
-  const { data: topListings } = trpc.sellerAnalytics.topListings.useQuery({ limit: 5 });
-  const { data: revenueByCategory } = trpc.sellerAnalytics.revenueByCategory.useQuery(undefined);
-  const { data: auctionStats } = trpc.sellerAnalytics.auctionStats.useQuery(undefined);
-  const { data: orders = [], isLoading: ordersLoading } = trpc.transactions.listSellerOrders.useQuery(undefined);
-  const { data: returnsData = [], refetch: refetchReturns } = (trpc as any).returns.getSellerReturns.useQuery(undefined, { enabled: isAuthenticated });
 
-  const utils = trpc.useUtils();
-
-  const deleteListingMutation = trpc.seller.deleteListing.useMutation();
-
-  const { data: pricingTiers = [], isLoading: pricingLoading } = trpc.ads.getSponsoredPricing.useQuery(undefined);
-  const { data: gateways = [], isLoading: gatewaysLoading } = trpc.ads.getActiveGateways.useQuery(undefined);
-
-  const promoteListingMutation = trpc.ads.promoteListing.useMutation();
-  const createDealMutation = trpc.seller.updateListingPrice.useMutation();
-
-  const updateStatusMutation = trpc.transactions.updateStatus.useMutation();
-
-  const updateReturnStatusMutation = (trpc as any).returns.updateStatus.useMutation();
-
-  const COLORS = ["#00AA44", "#FFA500", "#FF6B6B", "#4ECDC4"];
 
   return (
     <div className="min-h-screen bg-gray-50/50">
@@ -249,7 +255,10 @@ export default function SellerDashboard() {
                       <p className="text-3xl font-black">{auctionStats?.totalBids || 0}</p>
                     </div>
                   </div>
-                  <Button className="w-full mt-8 bg-white/10 hover:bg-white/20 text-white border-none rounded-2xl font-black py-6">
+                  <Button
+                    className="w-full mt-8 bg-white/10 hover:bg-white/20 text-white border-none rounded-2xl font-black py-6"
+                    onClick={() => setLocation("/auctions")}
+                  >
                     View Auctions
                   </Button>
                 </Card>
@@ -261,22 +270,53 @@ export default function SellerDashboard() {
         {/* Listings Tab */}
         {activeTab === "listings" && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input 
-                  placeholder="Search your listings..." 
+                <Input
+                  placeholder="Search your listings..."
+                  value={listingSearch}
+                  onChange={e => setListingSearch(e.target.value)}
                   className="h-16 pl-16 pr-6 rounded-[24px] bg-white border-none shadow-xl font-bold text-lg"
                 />
               </div>
-              <Button variant="outline" className="h-16 px-8 rounded-[24px] border-none bg-white shadow-xl font-black text-gray-500">
-                <Filter className="w-5 h-5 mr-3" />
-                Filters
-              </Button>
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  className={`h-16 px-8 rounded-[24px] border-none bg-white shadow-xl font-black w-full md:w-auto transition-all ${
+                    statusFilter !== "all" ? "text-green-600 ring-2 ring-green-400" : "text-gray-500"
+                  }`}
+                  onClick={() => setShowFilterMenu(v => !v)}
+                >
+                  <Filter className="w-5 h-5 mr-3" />
+                  {statusFilter === "all" ? "Filters" : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                </Button>
+                {showFilterMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                    {["all", "active", "pending", "inactive", "sold", "rejected"].map(s => (
+                      <button
+                        key={s}
+                        className={`w-full text-left px-5 py-3 font-bold text-sm capitalize transition-colors ${
+                          statusFilter === s ? "bg-green-50 text-green-700" : "hover:bg-gray-50 text-gray-700"
+                        }`}
+                        onClick={() => { setStatusFilter(s); setShowFilterMenu(false); }}
+                      >
+                        {s === "all" ? "All Statuses" : s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              {listings?.listings.map((item: any) => (
+              {listings?.listings
+                .filter((item: any) => {
+                  const matchSearch = !listingSearch || item.title.toLowerCase().includes(listingSearch.toLowerCase());
+                  const matchStatus = statusFilter === "all" || item.status === statusFilter;
+                  return matchSearch && matchStatus;
+                })
+                .map((item: any) => (
                 <Card key={item.id} className="p-8 border-none shadow-xl rounded-[40px] bg-white hover:scale-[1.01] transition-all group">
                   <div className="flex flex-col lg:flex-row lg:items-center gap-10">
                     <div className="w-40 h-40 bg-gray-100 rounded-[32px] overflow-hidden shadow-inner shrink-0 relative">
@@ -320,23 +360,23 @@ export default function SellerDashboard() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex lg:flex-col gap-3 shrink-0">
+                    <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 shrink-0 lg:w-40">
                       {!item.isFeatured ? (
-                        <Button 
-                          className="flex-1 lg:w-40 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white rounded-2xl h-14 font-black shadow-xl shadow-green-100 transition-all"
+                        <Button
+                          className="lg:w-40 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white rounded-2xl h-12 lg:h-14 font-black shadow-xl shadow-green-100 transition-all text-sm"
                           onClick={() => { setPromoteListingItem(item); setSelectedTier("basic"); setPromoteModalOpen(true); }}
                         >
                           <Star className="w-4 h-4 mr-2 fill-white" />
                           Promote
                         </Button>
                       ) : (
-                        <div className="flex-1 lg:w-40 h-14 flex items-center justify-center bg-yellow-50 border-2 border-yellow-200 rounded-2xl">
+                        <div className="lg:w-40 h-12 lg:h-14 flex items-center justify-center bg-yellow-50 border-2 border-yellow-200 rounded-2xl">
                           <Zap className="w-4 h-4 mr-2 text-yellow-500 fill-yellow-500" />
                           <span className="text-yellow-600 font-black text-sm">Featured</span>
                         </div>
                       )}
-                      <Button 
-                        className="flex-1 lg:w-40 bg-gray-900 text-white rounded-2xl h-14 font-black shadow-xl"
+                      <Button
+                        className="lg:w-40 bg-gray-900 text-white rounded-2xl h-12 lg:h-14 font-black shadow-xl text-sm"
                         onClick={() => setLocation(`/edit-listing/${item.id}`)}
                       >
                         <Edit2 className="w-4 h-4 mr-2" />
@@ -344,7 +384,7 @@ export default function SellerDashboard() {
                       </Button>
                       <Button
                         variant="outline"
-                        className="flex-1 lg:w-40 border-green-200 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-2xl h-14 font-black transition-all"
+                        className="lg:w-40 border-green-200 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-2xl h-12 lg:h-14 font-black transition-all text-sm"
                         onClick={() => setDealModal({ id: item.id, currentPrice: item.price ?? 0, title: item.title })}
                       >
                         <Sparkles className="w-4 h-4 mr-2" />
@@ -352,9 +392,9 @@ export default function SellerDashboard() {
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            className="flex-1 lg:w-40 border-gray-200 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-2xl h-14 font-black transition-all"
+                          <Button
+                            variant="outline"
+                            className="lg:w-40 border-gray-200 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-2xl h-12 lg:h-14 font-black transition-all text-sm"
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
                             Delete
@@ -369,7 +409,7 @@ export default function SellerDashboard() {
                           </AlertDialogHeader>
                           <AlertDialogFooter className="mt-6">
                             <AlertDialogCancel className="h-12 rounded-xl font-bold border-gray-200 text-gray-600 hover:bg-gray-50 px-6">Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
+                            <AlertDialogAction
                               onClick={() => deleteListingMutation.mutate({ listingId: item.id }, {
                                 onSuccess: () => {
                                   toast.success("Listing deleted!");
