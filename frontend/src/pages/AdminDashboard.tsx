@@ -69,47 +69,31 @@ export default function AdminDashboard() {
     return () => clearTimeout(t);
   }, [adSearchQuery]);
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
-      </div>
-    );
-  }
+  // Determine role early (no hooks called yet, just reading state)
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
 
-  // Check if user is admin
-  if (user?.role !== "admin" && user?.role !== "super_admin") {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <Card className="p-8 text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
-          <p className="text-gray-600">You do not have permission to access the admin dashboard.</p>
-        </Card>
-      </div>
-    );
-  }
+  // ── ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS (Rules of Hooks) ──
 
-  // Fetch admin data
-  const analyticsQuery = trpc.admin.getAnalytics.useQuery();
-  const usersQuery = trpc.admin.getAllUsers.useQuery({ page: userPage, limit: PAGE_SIZE });
-  const listingsQuery = trpc.admin.getPendingListings.useQuery({ page: listingPage, limit: PAGE_SIZE });
-  const disputesQuery = trpc.admin.getDisputes.useQuery({ page: disputePage, limit: PAGE_SIZE });
-  const logsQuery = trpc.admin.getAdminLogs.useQuery({ page: logPage, limit: PAGE_SIZE });
+  // Fetch admin data — only fire when user is confirmed admin
+  const analyticsQuery = trpc.admin.getAnalytics.useQuery(undefined, { enabled: isAdmin });
+  const usersQuery = trpc.admin.getAllUsers.useQuery({ page: userPage, limit: PAGE_SIZE }, { enabled: isAdmin });
+  const listingsQuery = trpc.admin.getPendingListings.useQuery({ page: listingPage, limit: PAGE_SIZE }, { enabled: isAdmin });
+  const disputesQuery = trpc.admin.getDisputes.useQuery({ page: disputePage, limit: PAGE_SIZE }, { enabled: isAdmin });
+  const logsQuery = trpc.admin.getAdminLogs.useQuery({ page: logPage, limit: PAGE_SIZE }, { enabled: isAdmin });
+
   // Manage Ads queries
   const adSearchQuery2 = trpc.admin.searchListingsAdmin.useQuery(
     { query: debouncedAdSearch || " ", status: adStatusFilter === "all" ? undefined : adStatusFilter, limit: 50 },
-    { enabled: activeTab === "manage-ads" }
+    { enabled: isAdmin && activeTab === "manage-ads" }
   );
 
   // Sponsored Ads queries
   const promotionRequestsQuery = trpc.ads.adminGetPromotionRequests.useQuery(
     { status: promotionStatusFilter || undefined },
-    { enabled: activeTab === "sponsored" }
+    { enabled: isAdmin && activeTab === "sponsored" }
   );
-  const pricingQuery = trpc.ads.getSponsoredPricing.useQuery(undefined, { enabled: activeTab === "sponsored" });
-  const featuredListingsQuery = trpc.ads.adminGetFeaturedListings.useQuery(undefined, { enabled: activeTab === "sponsored" });
+  const pricingQuery = trpc.ads.getSponsoredPricing.useQuery(undefined, { enabled: isAdmin && activeTab === "sponsored" });
+  const featuredListingsQuery = trpc.ads.adminGetFeaturedListings.useQuery(undefined, { enabled: isAdmin && activeTab === "sponsored" });
 
   // Mutations
   const verifyUserMutation = trpc.admin.verifyUser.useMutation();
@@ -228,6 +212,30 @@ export default function AdminDashboard() {
     if (setPricingMutation.isError) toast.error((setPricingMutation.error as any)?.message || "Failed to update pricing");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setPricingMutation.isError]);
+
+  // ── EARLY RETURNS AFTER ALL HOOKS ──
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+      </div>
+    );
+  }
+
+  // Access check
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <Card className="p-8 text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+          <p className="text-gray-600">You do not have permission to access the admin dashboard.</p>
+        </Card>
+      </div>
+    );
+  }
 
   const handleAction = async () => {
     if (!actionReason.trim() && actionType !== "verify") {
