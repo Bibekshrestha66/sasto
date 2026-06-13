@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "react-hot-toast";
 import { Star, Sparkles, Rocket, Crown, PlusCircle, ExternalLink, ArrowRight } from "lucide-react";
-import { DefaultImage } from "@/components/ui/default-image";
+
 
 export default function PromoteAds() {
   const [, setLocation] = useLocation();
@@ -222,7 +222,7 @@ export default function PromoteAds() {
                         {item.images?.[0] ? (
                           <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         ) : (
-                          <DefaultImage className="w-full h-full" />
+                          <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center"><Star className="w-8 h-8 text-gray-300" /></div>
                         )}
                         {item.isFeatured && (
                           <div className="absolute top-2 right-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-[10px] font-black uppercase px-2 py-1 rounded-full shadow-lg flex items-center gap-1">
