@@ -55,21 +55,38 @@ export async function authenticateClerkUser(token: string) {
     } else {
       // Lazily update lastSignedIn and check if role changed in Clerk privateMetadata
       const clerkUser = await clerkClient.users.getUser(clerkId);
-      let newRole = (clerkUser.privateMetadata?.role as string) || "user";
+      let clerkRole = clerkUser.privateMetadata?.role as string | undefined;
+      let newRole = clerkRole || "user";
+      
       if (user.email === "bibekshrestha66@gmail.com" || user.email === process.env.OWNER_OPEN_ID) {
         newRole = "super_admin";
+      }
+
+      // Prevent accidental downgrade if DB role is elevated but Clerk role is missing/user
+      if ((!clerkRole || clerkRole === "user") && user.role && user.role !== "user" && newRole !== "super_admin") {
+        newRole = user.role;
+        // Backfill Clerk metadata so it stays in sync
+        clerkClient.users.updateUserMetadata(clerkId, {
+          privateMetadata: { role: newRole }
+        }).catch(console.error);
       }
       
       if (user.role !== newRole || user.name !== `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim()) {
         console.log(`[Clerk Auth] Updating role/metadata locally to: ${newRole} for ${clerkId}`);
         await upsertUser({
           openId: clerkId,
-          role: newRole,
+          role: newRole as any,
           name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim(),
           avatar: clerkUser.imageUrl,
           lastSignedIn: new Date(),
         });
         user = await getUserByOpenId(clerkId);
+      } else {
+        // Just update lastSignedIn
+        await upsertUser({
+          openId: clerkId,
+          lastSignedIn: new Date(),
+        });
       }
     }
 
