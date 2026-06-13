@@ -13,7 +13,7 @@ import { Star, Sparkles, Rocket, Crown, PlusCircle, ExternalLink, ArrowRight } f
 
 export default function PromoteAds() {
   const [, setLocation] = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   
   const [activeTab, setActiveTab] = useState<"existing" | "new" | "third_party">("existing");
   const [promoteModalOpen, setPromoteModalOpen] = useState(false);
@@ -45,6 +45,14 @@ export default function PromoteAds() {
   // Mutations
   const promoteListingMutation = trpc.ads.promoteListing.useMutation();
   const promoteThirdPartyMutation = trpc.ads.promoteThirdPartyAd.useMutation();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     setLocation("/login");

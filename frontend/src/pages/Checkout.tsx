@@ -22,7 +22,7 @@ interface CartItem {
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const { data: cartData, isLoading: isLoadingCart } = trpc.cart.get.useQuery(undefined, {
     enabled: isAuthenticated
   });
@@ -49,6 +49,14 @@ export default function Checkout() {
       setAddress(user.location || "");
     }
   }, [user]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     setLocation("/login");
