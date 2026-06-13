@@ -455,6 +455,78 @@ export const adsRouter = router({
       return { success: true, id: result[0].id };
     }),
 
+  /** Seamless 3rd party ad creation for standard users from /promote */
+  promoteThirdPartyAd: protectedProcedure
+    .input(z.object({
+      title: z.string().min(1),
+      description: z.string().optional(),
+      imageUrl: z.string().url(),
+      landingUrl: z.string().url(),
+      tier: z.enum(["basic", "standard", "premium"]),
+      paymentMethod: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      
+      // Auto-create advertiser if doesn't exist
+      let advertiserId;
+      const [existingAdv] = await db.select().from(advertisers).where(eq(advertisers.userId, ctx.user.id)).limit(1);
+      
+      if (existingAdv) {
+        advertiserId = existingAdv.id;
+      } else {
+        const result = await db.insert(advertisers).values({
+          userId: ctx.user.id,
+          businessName: ctx.user.name || "Individual",
+          contactEmail: ctx.user.email || "no-email@sasto.com",
+          status: "approved", // Auto-approve for unified flow
+          accountBalance: 0,
+        }).returning();
+        advertiserId = result[0].id;
+      }
+
+      // Get pricing
+      const [pricing] = await db.select().from(sponsoredAdPricing)
+        .where(and(eq(sponsoredAdPricing.tier, input.tier), eq(sponsoredAdPricing.isActive, true)))
+        .limit(1);
+
+      if (!pricing) throw new TRPCError({ code: "NOT_FOUND", message: "Pricing tier not found" });
+
+      // Generate payment URL
+      let paymentUrl = "";
+      if (input.paymentMethod) {
+        const gateways = await getActivePaymentGateways();
+        const gateway = gateways.find(g => g.name === input.paymentMethod);
+        if (!gateway) throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid payment gateway" });
+        
+        const transactionId = `txn_ad_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        paymentUrl = `/wallet-checkout?amount=${pricing.priceNPR}&transactionId=${transactionId}&gateway=${gateway.name}`;
+      }
+
+      // Create manualAd directly
+      const result = await db.insert(manualAds).values({
+        advertiserId,
+        title: input.title,
+        description: input.description || null,
+        imageUrl: input.imageUrl,
+        landingUrl: input.landingUrl,
+        adType: "banner",
+        placement: "homepage_middle",
+        status: "pending", // Must be approved by admin
+        dailyBudget: pricing.priceNPR / pricing.durationDays,
+        totalBudget: pricing.priceNPR,
+        costPerImpression: 1, // default mock value
+        costPerClick: 5,      // default mock value
+      }).returning();
+
+      return { 
+        success: true, 
+        adId: result[0].id,
+        price: pricing.priceNPR,
+        paymentUrl: paymentUrl || undefined
+      };
+    }),
+
   getAdvertiserAds: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     const advertiser = await db.select().from(advertisers).where(eq(advertisers.userId, ctx.user.id)).limit(1);

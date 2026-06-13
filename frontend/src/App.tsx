@@ -58,6 +58,8 @@ function PageLoader() {
   );
 }
 
+import PromoteAds from "./pages/PromoteAds";
+
 function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -100,6 +102,7 @@ function Router() {
         <Route path="/admin/ads" component={AdminAdDashboard} />
         <Route path="/super-admin/dashboard" component={SuperAdminDashboard} />
         <Route path="/wallet-checkout" component={WalletCheckout} />
+        <Route path="/promote" component={PromoteAds} />
         {/* Redirects for routes referenced elsewhere */}
         <Route path="/become-seller">
           <Redirect to="/verification" />

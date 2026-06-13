@@ -585,7 +585,6 @@ export function RentalResponsive() {
               </div>
             )}
 
-            {/* Why Rent With Us */}
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <h3 className="font-bold text-gray-900 mb-3 text-sm">Why Rent With Us?</h3>
               <div className="space-y-3">
@@ -601,6 +600,18 @@ export function RentalResponsive() {
                   <Calendar className="w-4 h-4 text-purple-500" />
                   <span className="text-xs text-gray-600">Flexible Terms</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Sponsored */}
+            <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
+              <p className="text-xs text-gray-400 mb-2">Sponsored</p>
+              <div className="bg-purple-50 rounded-lg p-4 flex flex-col items-center">
+                <p className="text-purple-600 font-bold text-sm">Want to see your ad here?</p>
+                <p className="text-gray-500 text-[10px] mt-1 mb-3">Reach 50,000+ potential renters daily</p>
+                <Button variant="outline" size="sm" className="h-7 text-[10px] border-purple-400 text-purple-600 rounded-full" onClick={() => navigate("/promote")}>
+                  Promote Now
+                </Button>
               </div>
             </div>
           </div>

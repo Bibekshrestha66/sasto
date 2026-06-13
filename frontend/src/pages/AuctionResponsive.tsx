@@ -767,7 +767,7 @@ export function AuctionResponsive() {
               <div className="bg-orange-50 rounded-lg p-4 flex flex-col items-center">
                 <p className="text-orange-600 font-bold text-sm">Want to see your auction here?</p>
                 <p className="text-gray-500 text-[10px] mt-1 mb-3">Reach 50,000+ potential bidders daily</p>
-                <Button variant="outline" size="sm" className="h-7 text-[10px] border-orange-400 text-orange-600 rounded-full">
+                <Button variant="outline" size="sm" className="h-7 text-[10px] border-orange-400 text-orange-600 rounded-full" onClick={() => navigate("/promote")}>
                   Promote Now
                 </Button>
               </div>

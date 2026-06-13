@@ -1321,7 +1321,7 @@ export function MarketplaceResponsive() {
                 <div className="bg-green-50 rounded-lg p-4 flex flex-col items-center">
                   <p className="text-green-600 font-bold text-sm">Want to see your ad here?</p>
                   <p className="text-gray-500 text-[10px] mt-1 mb-3">Reach 50,000+ potential buyers daily</p>
-                  <Button variant="outline" size="sm" className="h-7 text-[10px] border-green-400 text-green-600 rounded-full" onClick={() => setLocation("/post-listing")}>
+                  <Button variant="outline" size="sm" className="h-7 text-[10px] border-green-400 text-green-600 rounded-full" onClick={() => setLocation("/promote")}>
                     Promote Now
                   </Button>
                 </div>
