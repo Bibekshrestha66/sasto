@@ -31,20 +31,25 @@ export default function PromoteAds() {
     landingUrl: "",
   });
 
-  if (!isAuthenticated) {
-    setLocation("/login");
-    return null;
-  }
-
-  // Data Fetching
+  // All hooks must be called before any conditional return
   const utils = trpc.useUtils();
-  const { data: listings = [], isLoading: listingsLoading } = trpc.seller.getListings.useQuery({ page: 1, limit: 100 });
+  // seller.getListings returns { listings: [], total, page, ... } — not a plain array
+  const { data: listingsData, isLoading: listingsLoading } = trpc.seller.getListings.useQuery(
+    { page: 1, limit: 100 },
+    { enabled: isAuthenticated }
+  );
+  const listings = listingsData?.listings ?? [];
   const { data: pricingTiers = [], isLoading: pricingLoading } = trpc.ads.getSponsoredPricing.useQuery(undefined);
   const { data: gateways = [], isLoading: gatewaysLoading } = trpc.ads.getActiveGateways.useQuery(undefined);
 
   // Mutations
   const promoteListingMutation = trpc.ads.promoteListing.useMutation();
   const promoteThirdPartyMutation = trpc.ads.promoteThirdPartyAd.useMutation();
+
+  if (!isAuthenticated) {
+    setLocation("/login");
+    return null;
+  }
 
   const handleThirdPartySubmit = (e: React.FormEvent) => {
     e.preventDefault();
